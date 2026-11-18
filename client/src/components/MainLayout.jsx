@@ -14,10 +14,12 @@ import {
   HiOutlineCollection,
   HiOutlineUsers,
   HiOutlineUserCircle,
+  HiOutlinePresentationChartLine,
   HiMenu,
   HiX,
 } from "react-icons/hi";
 import Footer from "./Footer";
+import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS = { student: "Student", uni_admin: "University Admin", super_admin: "Super Admin" };
@@ -25,7 +27,7 @@ const ROLE_LABELS = { student: "Student", uni_admin: "University Admin", super_a
 const navClass = ({ isActive }) => (isActive ? "nav-link active" : "nav-link");
 
 const MainLayout = () => {
-  const { user, isAdmin, canManageEvents, logout } = useAuth();
+  const { user, isAdmin, canManageEvents, activeClubs, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
@@ -63,6 +65,11 @@ const MainLayout = () => {
           <span>Event Engine</span>
         </Link>
         <nav className="sidebar-nav" aria-label="Main">
+          {!isAdmin && (
+            <NavLink to="/" end className={navClass} onClick={closeMenu}>
+              <HiOutlineHome aria-hidden="true" /> <span>Home</span>
+            </NavLink>
+          )}
           <NavLink to="/events" className={navClass} onClick={closeMenu}>
             <HiOutlineCalendar aria-hidden="true" /> <span>Events</span>
           </NavLink>
@@ -78,6 +85,11 @@ const MainLayout = () => {
           {canManageEvents && (
             <>
               <span className="nav-section">Organize</span>
+              {(isAdmin || activeClubs.some((m) => ["owner", "organizer"].includes(m.role))) && (
+                <NavLink to="/manage/dashboard" className={navClass} onClick={closeMenu}>
+                  <HiOutlinePresentationChartLine aria-hidden="true" /> <span>Club dashboard</span>
+                </NavLink>
+              )}
               <NavLink to="/manage/events" className={navClass} onClick={closeMenu}>
                 <HiOutlineClipboardList aria-hidden="true" /> <span>Manage events</span>
               </NavLink>
@@ -97,7 +109,7 @@ const MainLayout = () => {
                 <HiOutlineCollection aria-hidden="true" /> <span>Registrations</span>
               </NavLink>
               <NavLink to="/analytics" className={navClass} onClick={closeMenu}>
-                <HiOutlineChartBar aria-hidden="true" /> <span>Analytics</span>
+                <HiOutlineChartBar aria-hidden="true" /> <span>Reports</span>
               </NavLink>
               <NavLink to="/admin/users" className={navClass} onClick={closeMenu}>
                 <HiOutlineUsers aria-hidden="true" /> <span>Users</span>
@@ -107,6 +119,7 @@ const MainLayout = () => {
         </nav>
 
         <div className="sidebar-user">
+          <ThemeToggle />
           {user ? (
             <>
               <NavLink to="/profile" className={navClass} onClick={closeMenu}>
@@ -121,9 +134,12 @@ const MainLayout = () => {
               </button>
             </>
           ) : (
-            <NavLink to="/login" className={navClass} onClick={closeMenu}>
-              <HiOutlineLogin aria-hidden="true" /> <span>Sign in</span>
-            </NavLink>
+            <>
+              <NavLink to="/login" className={navClass} onClick={closeMenu}>
+                <HiOutlineLogin aria-hidden="true" /> <span>Sign in</span>
+              </NavLink>
+              <Link to="/signup" className="btn btn-primary btn-sm" onClick={closeMenu}>Create account</Link>
+            </>
           )}
         </div>
       </aside>

@@ -1,17 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   getClub, listEvents, updateClub, reviewClub, listClubMembers, addClubMember,
-  approveClubMember, removeClubMember, errorMessage,
+  approveClubMember, removeClubMember, followClub, unfollowClub, errorMessage,
 } from "../services/api";
+import ImageUpload from "../components/ImageUpload";
 import { useAuth } from "../context/AuthContext";
 import Loader from "../components/Loader";
 import EmptyState from "../components/EmptyState";
 import StatusBadge from "../components/StatusBadge";
 import ReasonDialog from "../components/ReasonDialog";
-import { EventCard } from "./Events";
-import { HiArrowLeft, HiOutlineUserGroup, HiPlus } from "react-icons/hi";
+import EventCard from "../components/EventCard";
+import { HiArrowLeft, HiOutlineUserGroup, HiPlus, HiCheck } from "react-icons/hi";
 
 const ROLE_LABEL = { owner: "Owner", organizer: "Organizer", volunteer: "Volunteer" };
 
@@ -175,13 +176,13 @@ const ProfileEditor = ({ club, isAdmin, onSaved, onClose }) => {
           <input id="pe-name" required minLength={3} maxLength={100} value={form.name} onChange={set("name")} />
         </div>
       )}
+      <ImageUpload id="pe-logo" label="Logo" square value={form.logoUrl} onChange={(url) => setForm((f) => ({ ...f, logoUrl: url }))} hint="Square image works best. JPEG, PNG or WebP, up to 2 MB." />
       <div className="form-group">
         <label htmlFor="pe-desc">Description</label>
         <textarea id="pe-desc" rows={4} maxLength={2000} value={form.description} onChange={set("description")} />
       </div>
       <div className="form-grid">
         <div className="form-group"><label htmlFor="pe-email">Contact email</label><input id="pe-email" type="email" value={form.contactEmail} onChange={set("contactEmail")} /></div>
-        <div className="form-group"><label htmlFor="pe-logo">Logo link</label><input id="pe-logo" type="url" value={form.logoUrl} onChange={set("logoUrl")} /></div>
         <div className="form-group"><label htmlFor="pe-ig">Instagram</label><input id="pe-ig" type="url" value={form.instagram} onChange={set("instagram")} /></div>
         <div className="form-group"><label htmlFor="pe-li">LinkedIn</label><input id="pe-li" type="url" value={form.linkedin} onChange={set("linkedin")} /></div>
         <div className="form-group"><label htmlFor="pe-web">Website</label><input id="pe-web" type="url" value={form.website} onChange={set("website")} /></div>
@@ -198,6 +199,7 @@ const SOCIAL_LABELS = { website: "Website", instagram: "Instagram", linkedin: "L
 
 const ClubDetail = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [club, setClub] = useState(null);
   const [viewer, setViewer] = useState(null);
@@ -258,6 +260,24 @@ const ClubDetail = () => {
   const isAdmin = viewer.role === "admin";
   const socials = Object.entries(club.socials || {}).filter(([, url]) => url);
 
+  async function toggleFollow() {
+    if (!user) {
+      navigate("/login", { state: { from: `/clubs/${slug}` } });
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = viewer.following ? await unfollowClub(club._id) : await followClub(club._id);
+      setViewer((v) => ({ ...v, following: res.data.data.following }));
+      setClub((c) => ({ ...c, followers: res.data.data.followers }));
+      if (res.data.data.following) toast.success(`Following ${club.name}. Their events will show up in your recommendations.`);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="page-container">
       {back}
@@ -275,14 +295,28 @@ const ClubDetail = () => {
           </div>
           <h1>{club.name}</h1>
           {club.description && <p className="header-subtitle club-hero-desc">{club.description}</p>}
-          {(socials.length > 0 || club.contactEmail) && (
-            <div className="social-links">
-              {socials.map(([k, url]) => (
-                <a key={k} href={url} target="_blank" rel="noopener noreferrer nofollow" className="text-link">{SOCIAL_LABELS[k]}</a>
-              ))}
-              {club.contactEmail && <span className="muted">{club.contactEmail}</span>}
-            </div>
-          )}
+          <div className="club-hero-actions">
+            {club.status === "approved" && (
+              <button
+                type="button"
+                className={`btn btn-sm ${viewer.following ? "btn-secondary" : "btn-primary"}`}
+                aria-pressed={viewer.following}
+                disabled={busy}
+                onClick={toggleFollow}
+              >
+                {viewer.following ? <><HiCheck aria-hidden="true" /> Following</> : <><HiPlus aria-hidden="true" /> Follow</>}
+              </button>
+            )}
+            <span className="muted">{club.followers} follower{club.followers === 1 ? "" : "s"}</span>
+            {(socials.length > 0 || club.contactEmail) && (
+              <div className="social-links">
+                {socials.map(([k, url]) => (
+                  <a key={k} href={url} target="_blank" rel="noopener noreferrer nofollow" className="text-link">{SOCIAL_LABELS[k]}</a>
+                ))}
+                {club.contactEmail && <span className="muted">{club.contactEmail}</span>}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

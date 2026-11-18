@@ -1,143 +1,75 @@
-import { useState, useEffect } from "react";
-import { listManageableEvents, getAllRegistrations, errorMessage } from "../services/api";
+import { useCallback, useEffect, useState } from "react";
+import { getAdminAnalytics, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
-import Loader from "../components/Loader";
 import StatCard from "../components/StatCard";
 import EmptyState from "../components/EmptyState";
+import { SkeletonStats } from "../components/Skeleton";
+import { TimeBarChart, HBarList } from "../components/charts";
+import EventPerformanceTable from "../components/EventPerformanceTable";
+import { STATUS_LABELS } from "../utils/format";
+import { HiOutlineTicket, HiOutlineCheckCircle, HiOutlineChartBar, HiOutlineXCircle } from "react-icons/hi";
 
-const pct = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
-import { HiOutlineChartBar, HiOutlineBadgeCheck, HiOutlineUserGroup, HiOutlineCurrencyRupee } from "react-icons/hi";
-
+// University-wide reports for admins (all numbers computed on the server).
 const Analytics = () => {
-  const [events, setEvents] = useState([]);
-  const [registrations, setRegistrations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
 
-  const fetchData = async () => {
+  const load = useCallback(async () => {
+    setError("");
     try {
-      setLoadError("");
-      const [eventsRes, regsRes] = await Promise.all([listManageableEvents({ limit: 100 }), getAllRegistrations()]);
-      setEvents(eventsRes.data.data);
-      // Cancelled registrations are kept for history but excluded from stats.
-      setRegistrations(regsRes.data.data.filter((r) => r.status !== "cancelled"));
+      const res = await getAdminAnalytics();
+      setData(res.data.data);
     } catch (err) {
-      setLoadError(errorMessage(err));
-    } finally {
-      setLoading(false);
+      setError(errorMessage(err));
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  if (loading) return <Loader />;
-  if (loadError) {
-    return (
-      <div className="page-container">
-        <EmptyState error title="Couldn't load analytics" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />
-      </div>
-    );
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const totalRegs = registrations.length;
-  const totalCheckedIn = registrations.filter(r => r.checkInStatus).length;
-  // Only verified (Completed) payments count as revenue.
-  const totalRevenue = registrations
-    .filter(r => r.paymentDetails?.status === "Completed")
-    .reduce((sum, r) => sum + (r.paymentDetails?.amountPaid || 0), 0);
+  if (error) return <div className="page-container"><EmptyState error title="Couldn't load reports" message={error} onRetry={load} /></div>;
 
-  // Department distribution
-  const deptMap = registrations.reduce((acc, r) => {
-    acc[r.department] = (acc[r.department] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Event distribution
-  const eventMap = registrations.reduce((acc, r) => {
-    acc[r.eventId] = (acc[r.eventId] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Payment status distribution
-  const paymentStatusMap = registrations.reduce((acc, r) => {
-    const status = r.paymentDetails?.status || "Unknown";
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {});
-
+  const t = data?.totals;
   return (
     <div className="page-container">
-      <PageHeader title="Analytics & Reports" subtitle="Comprehensive performance metrics and student engagement statistics" />
-
-      <div className="stats-grid">
-        <StatCard icon={<HiOutlineUserGroup />} label="Total Registrations" value={totalRegs} color="blue" />
-        <StatCard icon={<HiOutlineBadgeCheck />} label="Check-In Rate" value={`${pct(totalCheckedIn, totalRegs)}%`} color="green" />
-        <StatCard icon={<HiOutlineChartBar />} label="Active Events" value={events.length} color="purple" />
-        <StatCard icon={<HiOutlineCurrencyRupee />} label="Verified Revenue" value={`₹${totalRevenue.toLocaleString()}`} color="orange" />
-      </div>
-
-      <div className="analytics-grid">
-        {/* Registrations per Event */}
-        <div className="analytics-card">
-          <h3>Registrations by Event</h3>
-          <div className="bar-chart-list">
-            {events.map(ev => {
-              const count = eventMap[ev._id] || 0;
-              const pct = totalRegs ? Math.round((count / totalRegs) * 100) : 0;
-              return (
-                <div key={ev._id} className="bar-chart-item">
-                  <div className="bar-label">
-                    <span><strong>{ev._id}</strong> - {ev.title}</span>
-                    <span>{count} ({pct}%)</span>
-                  </div>
-                  <div className="bar-track">
-                    <div className="bar-fill bar-fill-primary" style={{ width: `${pct}%` }}></div>
-                  </div>
-                </div>
-              );
-            })}
+      <PageHeader title="Reports" subtitle="Registrations, attendance and event performance" />
+      {!data ? (
+        <SkeletonStats />
+      ) : (
+        <>
+          <div className="stats-grid">
+            <StatCard icon={<HiOutlineTicket />} label="Active registrations" value={t.registrations} color="blue" />
+            <StatCard icon={<HiOutlineCheckCircle />} label="Attendance at past events" value={t.attendanceRate === null ? "n/a" : `${t.attendanceRate}%`} color="green" />
+            <StatCard icon={<HiOutlineChartBar />} label="Seats filled (published events)" value={`${t.capacityUtilization}%`} color="purple" />
+            <StatCard icon={<HiOutlineXCircle />} label="Cancelled registrations" value={t.cancelledRegistrations} color="orange" />
           </div>
-        </div>
 
-        {/* Department Breakdown */}
-        <div className="analytics-card">
-          <h3>Department Participation</h3>
-          <div className="bar-chart-list">
-            {Object.entries(deptMap)
-              .sort((a, b) => b[1] - a[1])
-              .map(([dept, count]) => {
-                const pct = totalRegs ? Math.round((count / totalRegs) * 100) : 0;
-                return (
-                  <div key={dept} className="bar-chart-item">
-                    <div className="bar-label">
-                      <span>{dept}</span>
-                      <span>{count} students ({pct}%)</span>
-                    </div>
-                    <div className="bar-track">
-                      <div className="bar-fill bar-fill-accent" style={{ width: `${pct}%` }}></div>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="charts-grid">
+            <section className="chart-card">
+              <h3>Registrations per day</h3>
+              <TimeBarChart data={data.trend} title="Registrations per day" />
+            </section>
+            <section className="chart-card">
+              <h3>Published events by category</h3>
+              <HBarList items={Object.entries(data.byCategory).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }))} />
+            </section>
+            <section className="chart-card">
+              <h3>Events by status</h3>
+              <HBarList
+                items={Object.entries(data.statusCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([status, value]) => ({ label: STATUS_LABELS[status] || status, value }))}
+              />
+            </section>
           </div>
-        </div>
 
-        {/* Payment Breakdown */}
-        <div className="analytics-card">
-          <h3>Payment Status Summary</h3>
-          <div className="status-grid">
-            {Object.entries(paymentStatusMap).map(([status, count]) => (
-              <div key={status} className={`status-summary-card status-${status.toLowerCase()}`}>
-                <span className="status-title">{status}</span>
-                <span className="status-value">{count}</span>
-                <span className="status-subtitle">{pct(count, totalRegs)}% of total</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+          <section className="dashboard-section">
+            <h2>All published events</h2>
+            <EventPerformanceTable events={data.events} showClub />
+          </section>
+        </>
+      )}
     </div>
   );
 };

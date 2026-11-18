@@ -207,6 +207,12 @@ const EventDetail = () => {
     <div className="page-container">
       {backLink}
 
+      {event.bannerUrl && (
+        <div className="event-banner">
+          <img src={event.bannerUrl} alt="" referrerPolicy="no-referrer" />
+        </div>
+      )}
+
       <header className="event-hero">
         <div className="event-hero-badges">
           <span className={`badge badge--${event.category.toLowerCase()}`}>{event.category}</span>

@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/PageHeader";
 import Loader from "../components/Loader";
 import EmptyState from "../components/EmptyState";
+import ImageUpload from "../components/ImageUpload";
 import { toLocalInput, fromLocalInput } from "../utils/format";
 import { HiArrowLeft } from "react-icons/hi";
 
@@ -26,6 +27,7 @@ const EMPTY = {
   tags: "",
   coordinatorName: "",
   coordinatorContact: "",
+  bannerUrl: "",
 };
 
 // Create a new event (as a draft) or edit an existing one.
@@ -73,6 +75,7 @@ const EventForm = () => {
             tags: (ev.tags || []).join(", "),
             coordinatorName: ev.coordinators?.[0]?.name || "",
             coordinatorContact: ev.coordinators?.[0]?.contact || "",
+            bannerUrl: ev.bannerUrl || "",
           });
         }
       } catch (err) {
@@ -111,6 +114,7 @@ const EventForm = () => {
       capacity: Number(form.capacity),
       tags: splitList(form.tags),
       coordinators: form.coordinatorName ? [{ name: form.coordinatorName, contact: form.coordinatorContact }] : [],
+      bannerUrl: form.bannerUrl,
     };
     try {
       if (isEdit) {
@@ -192,6 +196,7 @@ const EventForm = () => {
               <input required minLength={2} maxLength={150} placeholder="e.g. Auditorium A" {...field("venue")} />
             </div>
           </div>
+          <ImageUpload id="ef-banner" label="Banner image (optional)" value={form.bannerUrl} onChange={(url) => setForm((f) => ({ ...f, bannerUrl: url }))} hint="Wide image, about 1600x500. JPEG, PNG or WebP, up to 2 MB." />
           <div className="form-group">
             <label htmlFor="ef-description">Description</label>
             <textarea rows={5} maxLength={5000} placeholder="What will attendees do or learn? Who is it for?" {...field("description")} />

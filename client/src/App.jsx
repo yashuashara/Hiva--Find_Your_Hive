@@ -20,15 +20,21 @@ import AdminUsers from "./pages/AdminUsers";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
+import Landing from "./pages/Landing";
+import StudentHome from "./pages/StudentHome";
+import ClubDashboard from "./pages/ClubDashboard";
+
 // Pages with heavy libraries (camera scanner, QR) load only when opened.
 const Scanner = lazy(() => import("./pages/Scanner"));
 const MyTickets = lazy(() => import("./pages/MyTickets"));
 
-// Admins land on the dashboard; everyone else on event discovery.
+// Home: visitors see the landing page, students their personal dashboard,
+// admins the platform dashboard.
 function Home() {
-  const { loading, isAdmin } = useAuth();
+  const { loading, isAdmin, user } = useAuth();
   if (loading) return <Loader />;
-  return isAdmin ? <Dashboard /> : <Navigate to="/events" replace />;
+  if (!user) return <Landing />;
+  return isAdmin ? <Dashboard /> : <StudentHome />;
 }
 
 // Manage-events pages: admins and active club team members.
@@ -66,6 +72,7 @@ function App() {
 
             {/* Club organizers and admins */}
             <Route element={<RequireManager />}>
+              <Route path="manage/dashboard" element={<ClubDashboard />} />
               <Route path="manage/events" element={<ManageEvents />} />
               <Route path="manage/events/new" element={<EventForm />} />
               <Route path="manage/events/:id/edit" element={<EventForm />} />

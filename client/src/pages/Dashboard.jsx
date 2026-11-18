@@ -1,201 +1,92 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { listManageableEvents, getAllRegistrations, errorMessage } from "../services/api";
+import { getAdminAnalytics, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
-import Loader from "../components/Loader";
 import EmptyState from "../components/EmptyState";
-import { HiOutlineCalendar, HiOutlineTicket, HiOutlineUsers, HiOutlineCurrencyRupee } from "react-icons/hi";
+import { SkeletonStats } from "../components/Skeleton";
+import { TimeBarChart, HBarList } from "../components/charts";
+import EventPerformanceTable from "../components/EventPerformanceTable";
+import { HiOutlineCalendar, HiOutlineTicket, HiOutlineCheckCircle, HiOutlineUsers } from "react-icons/hi";
 
+// University admin dashboard. All numbers are computed on the server.
 const Dashboard = () => {
-  const [events, setEvents] = useState([]);
-  const [registrations, setRegistrations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
 
-  const fetchData = async () => {
+  const load = useCallback(async () => {
+    setError("");
     try {
-      setLoadError("");
-      const [eventsRes, regsRes] = await Promise.all([listManageableEvents({ limit: 100 }), getAllRegistrations()]);
-      setEvents(eventsRes.data.data);
-      // Cancelled registrations are kept for history but excluded from stats.
-      setRegistrations(regsRes.data.data.filter((r) => r.status !== "cancelled"));
+      const res = await getAdminAnalytics();
+      setData(res.data.data);
     } catch (err) {
-      setLoadError(errorMessage(err));
-    } finally {
-      setLoading(false);
+      setError(errorMessage(err));
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  if (loading) return <Loader />;
-  if (loadError) {
-    return (
-      <div className="page-container">
-        <EmptyState error title="Couldn't load the dashboard" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />
-      </div>
-    );
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (error) {
+    return <div className="page-container"><EmptyState error title="Couldn't load the dashboard" message={error} onRetry={load} /></div>;
   }
 
-  // Only verified (Completed) payments count as revenue.
-  const totalRevenue = registrations
-    .filter((r) => r.paymentDetails?.status === "Completed")
-    .reduce((sum, r) => sum + (r.paymentDetails?.amountPaid || 0), 0);
-  const checkedIn = registrations.filter((r) => r.checkInStatus).length;
-
-  // Department distribution
-  const deptCounts = registrations.reduce((acc, r) => {
-    acc[r.department] = (acc[r.department] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Recent registrations
-  const recentRegs = [...registrations]
-    .sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate))
-    .slice(0, 8);
+  const t = data?.totals;
+  const pendingTotal = data ? data.pending.clubs + data.pending.events + data.pending.memberships : 0;
 
   return (
     <div className="page-container">
-      <PageHeader title="Dashboard" subtitle="Campus Events Management Overview" />
+      <PageHeader
+        title="Dashboard"
+        subtitle="Platform overview for your university"
+        action={<Link to="/analytics" className="btn btn-secondary">Full reports</Link>}
+      />
 
-      <div className="stats-grid">
-        <StatCard
-          icon={<HiOutlineCalendar />}
-          label="Total Events"
-          value={events.length}
-          color="blue"
-        />
-        <StatCard
-          icon={<HiOutlineTicket />}
-          label="Total Registrations"
-          value={registrations.length}
-          color="green"
-        />
-        <StatCard
-          icon={<HiOutlineUsers />}
-          label="Checked In"
-          value={checkedIn}
-          color="purple"
-        />
-        <StatCard
-          icon={<HiOutlineCurrencyRupee />}
-          label="Verified Revenue"
-          value={`₹${totalRevenue.toLocaleString()}`}
-          color="orange"
-        />
-      </div>
+      {!data ? (
+        <SkeletonStats />
+      ) : (
+        <>
+          <div className="stats-grid">
+            <StatCard icon={<HiOutlineCalendar />} label={`Events · ${t.upcoming} upcoming`} value={t.events} color="blue" />
+            <StatCard icon={<HiOutlineTicket />} label="Active registrations" value={t.registrations} color="purple" />
+            <StatCard icon={<HiOutlineCheckCircle />} label={`Attendance at past events · ${t.checkedIn} checked in`} value={t.attendanceRate === null ? "n/a" : `${t.attendanceRate}%`} color="green" />
+            <StatCard icon={<HiOutlineUsers />} label={`Accounts · ${data.clubs.approved || 0} clubs`} value={data.users} color="orange" />
+          </div>
 
-      {/* Events Overview */}
-      <section className="dashboard-section">
-        <div className="section-header">
-          <h2>Events Overview</h2>
-          <Link to="/events" className="btn btn-ghost">View All →</Link>
-        </div>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Event ID</th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Venue</th>
-                <th>Capacity</th>
-                <th>Seats Left</th>
-                <th>Fee</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) => (
-                <tr key={event._id}>
-                  <td><span className="badge badge--id">{event._id}</span></td>
-                  <td className="cell-bold">{event.title}</td>
-                  <td>
-                    <span className={`badge badge--${event.category.toLowerCase()}`}>
-                      {event.category}
-                    </span>
-                  </td>
-                  <td>{event.venue}</td>
-                  <td>{event.capacity}</td>
-                  <td>
-                    <span className={`badge ${event.seatsAvailable < 20 ? "badge--danger" : "badge--success"}`}>
-                      {event.seatsAvailable}
-                    </span>
-                  </td>
-                  <td>{event.entryFee === 0 ? "Free" : `₹${event.entryFee}`}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Department Distribution */}
-      <section className="dashboard-section">
-        <h2>Department Distribution</h2>
-        <div className="dept-grid">
-          {Object.entries(deptCounts)
-            .sort((a, b) => b[1] - a[1])
-            .map(([dept, count]) => (
-              <div key={dept} className="dept-card">
-                <span className="dept-name">{dept}</span>
-                <span className="dept-count">{count}</span>
-                <div className="dept-bar">
-                  <div
-                    className="dept-bar-fill"
-                    style={{ width: `${(count / registrations.length) * 100}%` }}
-                  ></div>
-                </div>
+          <section className="dashboard-section">
+            <h2>Needs your attention</h2>
+            {pendingTotal === 0 ? (
+              <p className="muted">Nothing waiting for review. 🎉</p>
+            ) : (
+              <div className="pending-list">
+                <Link to="/admin/approvals" className="pending-item"><strong>{data.pending.clubs}</strong> club requests</Link>
+                <Link to="/admin/approvals" className="pending-item"><strong>{data.pending.events}</strong> events to approve</Link>
+                <Link to="/admin/approvals" className="pending-item"><strong>{data.pending.memberships}</strong> team requests</Link>
               </div>
-            ))}
-        </div>
-      </section>
+            )}
+          </section>
 
-      {/* Recent Registrations */}
-      <section className="dashboard-section">
-        <div className="section-header">
-          <h2>Recent Registrations</h2>
-          <Link to="/registrations" className="btn btn-ghost">View All →</Link>
-        </div>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Ticket ID</th>
-                <th>Student</th>
-                <th>Event</th>
-                <th>Department</th>
-                <th>Year</th>
-                <th>Check-In</th>
-                <th>Payment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentRegs.map((reg) => (
-                <tr key={reg.ticketId}>
-                  <td><span className="badge badge--id">{reg.ticketId}</span></td>
-                  <td className="cell-bold">{reg.studentName}</td>
-                  <td>{reg.eventId}</td>
-                  <td>{reg.department}</td>
-                  <td>Year {reg.year}</td>
-                  <td>
-                    <span className={`badge ${reg.checkInStatus ? "badge--success" : "badge--warning"}`}>
-                      {reg.checkInStatus ? "✓ Checked In" : "✗ Pending"}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge badge--${reg.paymentDetails?.status?.toLowerCase()}`}>
-                      {reg.paymentDetails?.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <div className="charts-grid">
+            <section className="chart-card">
+              <h3>Registrations per day</h3>
+              <TimeBarChart data={data.trend} title="Registrations per day" />
+            </section>
+            <section className="chart-card">
+              <h3>Most registered events</h3>
+              <HBarList items={data.topEvents.map((e) => ({ label: e.title, value: e.registered }))} emptyText="No registrations yet." />
+            </section>
+          </div>
+
+          <section className="dashboard-section">
+            <div className="section-header">
+              <h2>Recent events</h2>
+              <Link to="/manage/events" className="text-link">Manage events →</Link>
+            </div>
+            <EventPerformanceTable events={data.events.slice(0, 8)} showClub />
+          </section>
+        </>
+      )}
     </div>
   );
 };

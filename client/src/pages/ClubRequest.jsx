@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { requestClub, errorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/PageHeader";
+import ImageUpload from "../components/ImageUpload";
 import { HiArrowLeft } from "react-icons/hi";
 
 const CATEGORIES = ["Technical", "Cultural", "Sports", "Entrepreneurship", "Arts", "Social", "Academic", "Other"];
@@ -62,6 +63,7 @@ const ClubRequest = () => {
             </select>
           </div>
         </div>
+        <ImageUpload id="cr-logo" label="Logo (optional)" square value={form.logoUrl} onChange={(url) => setForm((f) => ({ ...f, logoUrl: url }))} />
         <div className="form-group">
           <label htmlFor="cr-description">What does the club do?</label>
           <textarea id="cr-description" rows={4} maxLength={2000} value={form.description} onChange={set("description")} />
@@ -70,10 +72,6 @@ const ClubRequest = () => {
           <div className="form-group">
             <label htmlFor="cr-email">Club contact email (optional)</label>
             <input id="cr-email" type="email" value={form.contactEmail} onChange={set("contactEmail")} />
-          </div>
-          <div className="form-group">
-            <label htmlFor="cr-logo">Logo image link (optional)</label>
-            <input id="cr-logo" type="url" placeholder="https://..." value={form.logoUrl} onChange={set("logoUrl")} />
           </div>
           <div className="form-group">
             <label htmlFor="cr-insta">Instagram (optional)</label>

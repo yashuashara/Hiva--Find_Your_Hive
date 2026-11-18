@@ -83,6 +83,24 @@ export const addClubMember = (id, data) => API.post(`/clubs/${enc(id)}/members`,
 export const approveClubMember = (id, memberId) => API.post(`/clubs/${enc(id)}/members/${enc(memberId)}/approve`, {});
 export const removeClubMember = (id, memberId) => API.delete(`/clubs/${enc(id)}/members/${enc(memberId)}`);
 
+export const followClub = (id) => API.post(`/clubs/${enc(id)}/follow`, {});
+export const unfollowClub = (id) => API.delete(`/clubs/${enc(id)}/follow`);
+
+// ==================== DASHBOARDS ====================
+export const getAdminAnalytics = () => API.get("/analytics/admin");
+export const getClubAnalytics = (clubId) => API.get(`/analytics/clubs/${enc(clubId)}`);
+export const getMyDashboard = () => API.get("/me/dashboard");
+export const getRecommendations = () => API.get("/me/recommendations");
+
+// ==================== UPLOADS ====================
+// Returns { url } for a JPEG/PNG/WebP image (max 2 MB). The server checks
+// the actual file contents, not just the extension.
+export const uploadImage = (file) => {
+  const form = new FormData();
+  form.append("image", file);
+  return API.post("/uploads/images", form);
+};
+
 // ==================== PLATFORM ADMIN ====================
 export const getApprovals = () => API.get("/admin/approvals");
 export const listUsers = (params) => API.get("/admin/users", { params });
