@@ -1,8 +1,9 @@
 import axios from "axios";
 
-// VITE_API_URL should point at ".../api". Older configs pointed at
-// ".../api/campus"; that suffix is stripped so they keep working.
-export const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000/api")
+// By default the API is on the same site under /api (Vercel in production,
+// the Vite dev-server proxy locally). VITE_API_URL can point elsewhere.
+// Older configs pointed at ".../api/campus"; that suffix is stripped.
+export const API_BASE = (import.meta.env.VITE_API_URL || "/api")
   .replace(/\/+$/, "")
   .replace(/\/campus$/, "");
 

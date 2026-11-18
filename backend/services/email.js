@@ -43,18 +43,27 @@ ${bodyHtml}
 }
 
 // Fire-and-forget: returns immediately; the email goes out in the background.
+// On serverless hosting the function may be frozen as soon as the response
+// is sent, so the send is registered with waitUntil() to let it finish.
 function send({ to, subject, text, html }) {
   const t = getTransporter();
   if (!t || !to) return;
   const message = { from: config.email.from, to, subject, text, html };
-  setImmediate(async () => {
+  const pending = (async () => {
     try {
       await t.sendMail(message);
       if (config.isTest) outbox.push(message);
     } catch (err) {
       console.error(`[email] failed to send "${subject}":`, err.message);
     }
-  });
+  })();
+  if (config.isServerless) {
+    try {
+      require("@vercel/functions").waitUntil(pending);
+    } catch {
+      /* not running on Vercel: the promise simply continues */
+    }
+  }
 }
 
 function sendRegistrationConfirmation(user, event, registration) {

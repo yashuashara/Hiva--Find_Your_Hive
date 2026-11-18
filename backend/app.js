@@ -40,6 +40,7 @@ function createApp({ sessionStore, authRateLimit, apiRateLimit } = {}) {
   // this folder (checked by content when uploaded), and they are served with
   // nosniff so a browser never treats one as HTML/script. Cross-origin
   // loading is allowed so the frontend on another domain can show them.
+  // (Only used with the local storage driver; Vercel Blob serves its own files.)
   app.use(
     "/uploads",
     express.static(config.uploadDir, {
@@ -84,13 +85,14 @@ function createApp({ sessionStore, authRateLimit, apiRateLimit } = {}) {
   // loading the user from the database (so floods are cut off cheaply).
   app.use(
     "/api",
-    limiter(apiRateLimit ?? config.rateLimit.apiPer15Min, "Too many requests. Please slow down.", { perUser: true })
+    limiter(apiRateLimit ?? config.rateLimit.apiPer15Min, "Too many requests. Please slow down.", { perUser: true, name: "api" })
   );
   app.use(loadUser);
 
   const authLimiter = limiter(
     authRateLimit ?? config.rateLimit.authPer15Min,
-    "Too many sign-in attempts. Please wait 15 minutes and try again."
+    "Too many sign-in attempts. Please wait 15 minutes and try again.",
+    { name: "auth" }
   );
   app.use("/api/auth", require("./routes/AuthRoute")(authLimiter));
   app.use("/api/campus", require("./routes/EventRoute"));

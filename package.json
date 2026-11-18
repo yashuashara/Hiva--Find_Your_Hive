@@ -1,0 +1,15 @@
+{
+  "name": "event-engine",
+  "private": true,
+  "description": "Event Engine & Ticket Club: campus event discovery, registration and QR ticketing",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "install:all": "npm ci --prefix backend && npm ci --prefix client",
+    "dev:api": "npm run dev --prefix backend",
+    "dev:web": "npm run dev --prefix client",
+    "test": "npm test --prefix backend",
+    "build": "npm run build --prefix client"
+  }
+}

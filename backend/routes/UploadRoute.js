@@ -9,6 +9,7 @@ const { limiter } = require("../middleware/security");
 const uploadLimiter = limiter(30, "Upload limit reached. Please try again later.", {
   perUser: true,
   windowMs: 60 * 60 * 1000,
+  name: "upload",
 });
 
 router.post("/images", requireAuth, uploadLimiter, receiveImage, uploadImage);

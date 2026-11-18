@@ -27,11 +27,35 @@ function detectImageType(buf) {
   return null;
 }
 
+const MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
+
+// Returns { url, name, bytes, type }, or null if the bytes are not a
+// supported image. Throws AppError(503) if no usable storage is configured.
 async function saveImage(buffer) {
   const ext = detectImageType(buffer);
   if (!ext) return null;
-  await fs.mkdir(config.uploadDir, { recursive: true });
   const name = `${crypto.randomBytes(16).toString("hex")}.${ext}`;
+
+  if (config.storageDriver === "blob") {
+    // Vercel Blob (BLOB_READ_WRITE_TOKEN is added automatically when a Blob
+    // store is connected to the Vercel project).
+    const { put } = require("@vercel/blob");
+    const blob = await put(`uploads/${name}`, buffer, {
+      access: "public",
+      contentType: MIME[ext],
+      addRandomSuffix: false,
+      cacheControlMaxAge: 365 * 24 * 60 * 60,
+    });
+    return { url: blob.url, name, bytes: buffer.length, type: ext };
+  }
+
+  if (config.isServerless) {
+    // Serverless disks are temporary: files would silently disappear.
+    const AppError = require("../utils/AppError");
+    throw new AppError(503, "Image uploads are not configured on this server yet");
+  }
+
+  await fs.mkdir(config.uploadDir, { recursive: true });
   await fs.writeFile(path.join(config.uploadDir, name), buffer, { flag: "wx" });
   return { url: `${config.publicApiUrl}/uploads/${name}`, name, bytes: buffer.length, type: ext };
 }
