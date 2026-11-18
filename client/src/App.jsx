@@ -4,6 +4,7 @@ import MainLayout from "./components/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { PageSkeleton } from "./components/Skeleton";
 import { MotionProvider } from "./lib/motion";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider, ADMIN_ROLES, useAuth } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
@@ -51,6 +52,7 @@ function App() {
     <AuthProvider>
       <MotionProvider>
       <Router>
+        <ErrorBoundary>
         <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -93,6 +95,7 @@ function App() {
           </Route>
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </Router>
       </MotionProvider>
     </AuthProvider>

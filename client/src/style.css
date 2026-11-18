@@ -766,3 +766,6 @@ h1, h2, h3 { line-height: 1.25; letter-spacing: -0.015em; }
 .skeleton-table { padding: 0.5rem 1rem; }
 .skeleton-row { display: flex; gap: 1.5rem; align-items: center; padding: 0.95rem 0; border-bottom: 1px solid var(--border); }
 .skeleton-row:last-child { border-bottom: none; }
+
+.error-details { margin-top: 1rem; text-align: left; max-width: 640px; margin-inline: auto; font-size: 0.8rem; color: var(--text-3); }
+.error-details code { display: block; margin-top: 0.4rem; padding: 0.6rem; border-radius: var(--radius-sm); background: var(--surface-2); white-space: pre-wrap; word-break: break-word; }

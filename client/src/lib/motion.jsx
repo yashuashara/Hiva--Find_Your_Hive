@@ -13,7 +13,14 @@ export const spring = { type: "spring", stiffness: 500, damping: 40, mass: 0.8 }
 
 // The animation engine (incl. layout animations) loads as its own chunk after
 // the first paint; until then components simply render without animating.
-const loadFeatures = () => import("./motionFeatures").then((mod) => mod.default);
+// If that chunk can't be downloaded, the app keeps working without animations.
+const loadFeatures = () =>
+  import("./motionFeatures")
+    .then((mod) => mod.default)
+    .catch((err) => {
+      console.warn("[motion] animations unavailable:", err?.message);
+      return {};
+    });
 
 export function MotionProvider({ children }) {
   return (

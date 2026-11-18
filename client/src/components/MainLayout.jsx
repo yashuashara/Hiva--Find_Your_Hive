@@ -21,6 +21,7 @@ import {
 import Footer from "./Footer";
 import ThemeToggle from "./ThemeToggle";
 import { PageSkeleton } from "./Skeleton";
+import ErrorBoundary from "./ErrorBoundary";
 import { useAuth } from "../context/AuthContext";
 import { AnimatePresence, m, spring, EASE } from "../lib/motion";
 
@@ -154,7 +155,9 @@ const MainLayout = () => {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.16, ease: EASE }}
           >
-            <Suspense fallback={<PageSkeleton />}>{outlet}</Suspense>
+            <ErrorBoundary resetKey={location.pathname}>
+              <Suspense fallback={<PageSkeleton />}>{outlet}</Suspense>
+            </ErrorBoundary>
           </m.div>
         </AnimatePresence>
         <Footer />
