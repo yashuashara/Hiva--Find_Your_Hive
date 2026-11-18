@@ -10,6 +10,7 @@ import EmptyState from "../components/EmptyState";
 import Pagination from "../components/Pagination";
 import { SkeletonCards } from "../components/Skeleton";
 import { AnimatedList } from "../lib/motion";
+import { clubCategoryLabel } from "../utils/format";
 import { HiSearch, HiPlus, HiOutlineUserGroup } from "react-icons/hi";
 
 const CATEGORIES = ["Technical", "Cultural", "Sports", "Entrepreneurship", "Arts", "Social", "Academic", "Other"];
@@ -27,7 +28,7 @@ const ClubCard = ({ club }) => (
         <h3 className="event-title">
           <Link to={`/clubs/${club.slug}`} className="card-link">{club.name}</Link>
         </h3>
-        <span className="badge badge--event">{club.category}</span>
+        <span className="badge badge--event">{clubCategoryLabel(club)}</span>
       </div>
     </div>
     {club.description && <p className="club-description">{club.description}</p>}

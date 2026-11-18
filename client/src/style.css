@@ -352,6 +352,7 @@ h1, h2, h3 { line-height: 1.25; letter-spacing: -0.015em; }
 /* Forms */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .form-group { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+.form-grid-full { grid-column: 1 / -1; }
 .form-group label { font-size: 0.84rem; font-weight: 600; color: var(--text-2); }
 .form-group input, .form-group select, .form-group textarea,
 .filters-group select, .search-box input, .manual-entry input, .data-table select {

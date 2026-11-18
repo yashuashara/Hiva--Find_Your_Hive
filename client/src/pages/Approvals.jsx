@@ -7,7 +7,7 @@ import { PageSkeleton } from "../components/Skeleton";
 import { AnimatePresence, m, itemMotion } from "../lib/motion";
 import EmptyState from "../components/EmptyState";
 import ReasonDialog from "../components/ReasonDialog";
-import { formatDateRange, formatDate } from "../utils/format";
+import { formatDateRange, formatDate, clubCategoryLabel } from "../utils/format";
 
 // Everything waiting for a university admin's decision.
 const Approvals = () => {
@@ -66,7 +66,7 @@ const Approvals = () => {
                 <div>
                   <Link className="text-link cell-bold" to={`/clubs/${c.slug}`}>{c.name}</Link>
                   <p className="muted">
-                    {c.category} · requested by {c.requestedBy?.name || "unknown"} ({c.requestedBy?.email}) on {formatDate(c.createdAt)}
+                    {clubCategoryLabel(c)} · requested by {c.requestedBy?.name || "unknown"} ({c.requestedBy?.email}) on {formatDate(c.createdAt)}
                   </p>
                   {c.description && <p className="review-desc">{c.description}</p>}
                 </div>

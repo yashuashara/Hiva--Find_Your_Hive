@@ -14,7 +14,7 @@ const CATEGORIES = ["Technical", "Cultural", "Sports", "Entrepreneurship", "Arts
 const ClubRequest = () => {
   const navigate = useNavigate();
   const { isAdmin, refreshMemberships } = useAuth();
-  const [form, setForm] = useState({ name: "", category: "Technical", description: "", contactEmail: "", logoUrl: "", instagram: "", website: "" });
+  const [form, setForm] = useState({ name: "", category: "Technical", customCategory: "", description: "", contactEmail: "", logoUrl: "", instagram: "", website: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -27,6 +27,7 @@ const ClubRequest = () => {
       const res = await requestClub({
         name: form.name,
         category: form.category,
+        ...(form.category === "Other" ? { customCategory: form.customCategory.trim() } : {}),
         description: form.description,
         contactEmail: form.contactEmail,
         logoUrl: form.logoUrl,
@@ -62,6 +63,23 @@ const ClubRequest = () => {
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          {form.category === "Other" && (
+            <div className="form-group form-grid-full">
+              <label htmlFor="cr-custom-category">What kind of club is it?</label>
+              <input
+                id="cr-custom-category"
+                required
+                minLength={2}
+                maxLength={40}
+                autoFocus
+                placeholder="e.g. Placement & Careers, Debate, Social Service"
+                aria-describedby="cr-custom-category-hint"
+                value={form.customCategory}
+                onChange={set("customCategory")}
+              />
+              <small id="cr-custom-category-hint" className="form-hint">Shown on your club's page instead of "Other".</small>
+            </div>
+          )}
         </div>
         <ImageUpload id="cr-logo" label="Logo (optional)" square value={form.logoUrl} onChange={(url) => setForm((f) => ({ ...f, logoUrl: url }))} />
         <div className="form-group">

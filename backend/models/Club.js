@@ -11,6 +11,8 @@ const clubSchema = new mongoose.Schema(
     slug: { type: String, required: true, lowercase: true, trim: true },
     description: { type: String, trim: true, maxlength: 2000, default: "" },
     category: { type: String, enum: CLUB_CATEGORIES, default: "Other" },
+    // Shown instead of "Other" when the category is Other (e.g. "Placement & Careers").
+    customCategory: { type: String, trim: true, maxlength: 40 },
     logoUrl: { type: String, trim: true, maxlength: 500 },
     contactEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },
     socials: {

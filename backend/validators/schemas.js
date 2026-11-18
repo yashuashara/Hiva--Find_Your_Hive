@@ -193,20 +193,34 @@ const listClubsQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(24),
 });
 
-const createClubSchema = z.object({
-  name: trimmed(3, 100),
-  description: optionalText(2000),
-  category: z.enum(CLUB_CATEGORIES).default("Other"),
-  contactEmail: emailField.optional().or(z.literal("")),
-  logoUrl: urlField.optional(),
-  socials: socialsField.optional(),
-});
+// Free-text label shown instead of "Other" (e.g. "Placement & Careers").
+const customCategoryField = z.string().trim().max(40, "Keep the category under 40 characters");
+const CUSTOM_CATEGORY_MSG = "Tell us what kind of club this is";
+
+const createClubSchema = z
+  .object({
+    name: trimmed(3, 100),
+    description: optionalText(2000),
+    category: z.enum(CLUB_CATEGORIES).default("Other"),
+    customCategory: customCategoryField.optional(),
+    contactEmail: emailField.optional().or(z.literal("")),
+    logoUrl: urlField.optional(),
+    socials: socialsField.optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.category === "Other" && (!v.customCategory || v.customCategory.length < 2)) {
+      ctx.addIssue({ code: "custom", path: ["customCategory"], message: CUSTOM_CATEGORY_MSG });
+    }
+  })
+  // The custom label only applies to "Other"; drop it for real categories.
+  .transform((v) => (v.category === "Other" ? v : { ...v, customCategory: undefined }));
 
 const updateClubSchema = z
   .object({
     name: trimmed(3, 100), // admins only (checked in the controller)
     description: z.string().trim().max(2000),
     category: z.enum(CLUB_CATEGORIES),
+    customCategory: customCategoryField,
     contactEmail: emailField.or(z.literal("")),
     logoUrl: urlField,
     socials: socialsField,

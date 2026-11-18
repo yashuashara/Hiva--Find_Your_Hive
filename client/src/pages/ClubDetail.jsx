@@ -13,6 +13,7 @@ import EmptyState from "../components/EmptyState";
 import StatusBadge from "../components/StatusBadge";
 import ReasonDialog from "../components/ReasonDialog";
 import EventCard from "../components/EventCard";
+import { clubCategoryLabel } from "../utils/format";
 import { HiArrowLeft, HiOutlineUserGroup, HiPlus, HiCheck } from "react-icons/hi";
 
 const ROLE_LABEL = { owner: "Owner", organizer: "Organizer", volunteer: "Volunteer" };
@@ -291,7 +292,7 @@ const ClubDetail = () => {
         )}
         <div>
           <div className="event-hero-badges">
-            <span className="badge badge--event">{club.category}</span>
+            <span className="badge badge--event">{clubCategoryLabel(club)}</span>
             {club.status !== "approved" && <StatusBadge status={club.status} />}
           </div>
           <h1>{club.name}</h1>

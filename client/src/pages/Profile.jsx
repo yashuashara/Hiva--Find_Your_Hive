@@ -24,7 +24,16 @@ const Profile = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const p = user.profile || {};
-  const [form, setForm] = useState({ name: user.name, prn: p.prn || "", department: p.department || "", year: p.year || "" });
+  // A department that isn't in the list (or "Other") shows as "Other" with
+  // the text box filled in.
+  const listed = DEPARTMENTS.includes(p.department) && p.department !== "Other";
+  const [form, setForm] = useState({
+    name: user.name,
+    prn: p.prn || "",
+    department: listed ? p.department : p.department ? "Other" : "",
+    departmentOther: !listed && p.department && p.department !== "Other" ? p.department : "",
+    year: p.year || "",
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -36,7 +45,13 @@ const Profile = () => {
     try {
       const profile = {};
       if (form.prn) profile.prn = form.prn;
-      if (form.department) profile.department = form.department;
+      const department = form.department === "Other" ? form.departmentOther.trim() : form.department;
+      if (form.department === "Other" && department.length < 2) {
+        setError("Please type your department.");
+        setSaving(false);
+        return;
+      }
+      if (department) profile.department = department;
       if (form.year) profile.year = Number(form.year);
       const res = await updateMe({ name: form.name, profile });
       setUser(res.data.data);
@@ -72,11 +87,26 @@ const Profile = () => {
               <label htmlFor="pf-dept">Department</label>
               <select id="pf-dept" value={form.department} onChange={set("department")}>
                 <option value="">Select…</option>
-                {[...new Set([...DEPARTMENTS, ...(form.department ? [form.department] : [])])].map((d) => (
+                {DEPARTMENTS.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </div>
+            {form.department === "Other" && (
+              <div className="form-group">
+                <label htmlFor="pf-dept-other">Your department</label>
+                <input
+                  id="pf-dept-other"
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  autoFocus={!form.departmentOther}
+                  placeholder="e.g. Pharmacy, Architecture"
+                  value={form.departmentOther}
+                  onChange={set("departmentOther")}
+                />
+              </div>
+            )}
             <div className="form-group">
               <label htmlFor="pf-year">Year of study</label>
               <select id="pf-year" value={form.year} onChange={set("year")}>

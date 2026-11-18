@@ -80,6 +80,30 @@ describe("club requests and approval", () => {
     expect((await other.post("/api/clubs").send(clubBody({ name: "a club" }))).status).toBe(409);
   });
 
+  test('"Other" category requires a custom label, which real categories drop', async () => {
+    const sc = await h.loggedInClient(app, await h.createUser());
+    const missing = await sc.post("/api/clubs").send(clubBody({ name: "CDC", category: "Other" }));
+    expect(missing.status).toBe(400);
+    expect(missing.body.details[0]).toMatchObject({ field: "customCategory" });
+
+    const ok = await sc.post("/api/clubs").send(clubBody({ name: "CDC", category: "Other", customCategory: " Placement & Careers " }));
+    expect(ok.body.data).toMatchObject({ category: "Other", customCategory: "Placement & Careers" });
+
+    const real = await sc.post("/api/clubs").send(clubBody({ name: "Chess Club", category: "Sports", customCategory: "ignored" }));
+    expect(real.body.data.customCategory).toBeUndefined();
+  });
+
+  test("switching away from Other clears the custom label; switching to Other needs one", async () => {
+    const owner = await h.createUser();
+    const club = await h.createClub({ owner });
+    const ownerC = await h.loggedInClient(app, owner);
+    expect((await ownerC.patch(`/api/clubs/${club._id}`).send({ category: "Other" })).status).toBe(400);
+    const toOther = await ownerC.patch(`/api/clubs/${club._id}`).send({ category: "Other", customCategory: "Debate" });
+    expect(toOther.body.data.customCategory).toBe("Debate");
+    const back = await ownerC.patch(`/api/clubs/${club._id}`).send({ category: "Arts" });
+    expect(back.body.data.customCategory).toBeUndefined();
+  });
+
   test("only http(s) links are accepted", async () => {
     const sc = await h.loggedInClient(app, await h.createUser());
     const res = await sc.post("/api/clubs").send(clubBody({ logoUrl: "javascript:alert(1)" }));

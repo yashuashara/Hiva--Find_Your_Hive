@@ -10,7 +10,7 @@ const { clubRoleOf, isAdminOf, isPlatformAdmin, can } = require("../services/per
 
 const MAX_PENDING_REQUESTS = 3;
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const PUBLIC_FIELDS = "name slug description category logoUrl socials contactEmail status university createdAt";
+const PUBLIC_FIELDS = "name slug description category customCategory logoUrl socials contactEmail status university createdAt";
 
 const slugify = (name) =>
   name
@@ -161,7 +161,18 @@ const updateClub = asyncHandler(async (req, res) => {
 
   const $set = { ...fields };
   for (const [key, value] of Object.entries(socials || {})) $set[`socials.${key}`] = value;
-  const updated = await Club.findByIdAndUpdate(club._id, { $set }, { new: true, runValidators: true });
+
+  // "Other" needs a custom label; real categories don't keep one.
+  const update = { $set };
+  const finalCategory = fields.category ?? club.category;
+  if (finalCategory === "Other") {
+    const label = fields.customCategory ?? club.customCategory;
+    if (!label || label.length < 2) throw new AppError(400, "Tell us what kind of club this is");
+  } else {
+    delete $set.customCategory;
+    update.$unset = { customCategory: 1 };
+  }
+  const updated = await Club.findByIdAndUpdate(club._id, update, { new: true, runValidators: true });
   await audit(req.user, "club.update", "Club", club._id, { fields: Object.keys(req.body) });
   res.json({ success: true, data: updated });
 });

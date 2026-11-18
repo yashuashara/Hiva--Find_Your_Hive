@@ -40,4 +40,8 @@ export const STATUS_LABELS = {
   active: "Active",
 };
 
-export const pct = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
+// A club's category as shown to people: the custom label when it's "Other".
+export const clubCategoryLabel = (club) =>
+  club?.category === "Other" && club?.customCategory ? club.customCategory : club?.category;
+
+export const pct =(part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
