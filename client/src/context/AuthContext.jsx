@@ -1,17 +1,36 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import * as api from "../services/api";
 
 const AuthContext = createContext(null);
 
 export const ADMIN_ROLES = ["uni_admin", "super_admin"];
 
+// All tabs of a browser share ONE login cookie. When someone signs in, signs
+// up or signs out in one tab, the others are told through this channel so
+// they never keep showing a stale account.
+const CHANNEL = "ee-auth";
+const openChannel = () => (typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(CHANNEL) : null);
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
 // Holds the signed-in user and their club memberships. The server is the
 // source of truth: on load we ask /auth/me, and the session itself lives in an
 // httpOnly cookie that JavaScript cannot read.
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [memberships, setMemberships] = useState([]);
+  const [user, setUserState] = useState(null);
+  const [memberships, setMembershipsState] = useState([]);
   const [loading, setLoading] = useState(true);
+  const userRef = useRef(null);
+  const channelRef = useRef(null);
+
+  // Only replace state when something actually changed, so re-checking the
+  // session (e.g. when a tab regains focus) doesn't make pages reload.
+  const setUser = useCallback((next) => {
+    if (same(userRef.current, next)) return;
+    userRef.current = next;
+    setUserState(next);
+  }, []);
+  const setMemberships = useCallback((next) => setMembershipsState((prev) => (same(prev, next) ? prev : next)), []);
 
   const loadMemberships = useCallback(async () => {
     try {
@@ -20,12 +39,17 @@ export function AuthProvider({ children }) {
     } catch {
       setMemberships([]);
     }
-  }, []);
+  }, [setMemberships]);
 
-  const refresh = useCallback(async () => {
+  // Asks the server who this browser is signed in as. If that changed since
+  // this tab last checked (another tab signed in/out), say so.
+  const refresh = useCallback(async ({ announce = false } = {}) => {
+    const before = userRef.current;
+    let after = null;
     try {
       const res = await api.getMe();
-      setUser(res.data.data);
+      after = res.data.data;
+      setUser(after);
       await loadMemberships();
     } catch {
       setUser(null);
@@ -33,25 +57,50 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [loadMemberships]);
+    if (announce && before?.id !== after?.id) {
+      toast(after ? `You're now signed in as ${after.name} (changed in another tab).` : "You were signed out in another tab.", {
+        id: "auth-changed",
+        icon: "🔄",
+      });
+    }
+  }, [loadMemberships, setUser, setMemberships]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
+  // Stay in sync with other tabs: instantly via BroadcastChannel, and as a
+  // fallback whenever this tab becomes visible again.
+  useEffect(() => {
+    const channel = openChannel();
+    channelRef.current = channel;
+    if (channel) channel.onmessage = () => refresh({ announce: true });
+    const onVisible = () => document.visibilityState === "visible" && refresh({ announce: true });
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      channel?.close();
+      channelRef.current = null;
+    };
+  }, [refresh]);
+
+  const notifyOtherTabs = () => channelRef.current?.postMessage({ type: "auth-changed" });
+
   const login = useCallback(async (credentials) => {
     const res = await api.login(credentials);
     setUser(res.data.data);
     await loadMemberships();
+    notifyOtherTabs();
     return res.data.data;
-  }, [loadMemberships]);
+  }, [loadMemberships, setUser]);
 
   const signup = useCallback(async (details) => {
     const res = await api.signup(details);
     setUser(res.data.data);
     setMemberships([]);
+    notifyOtherTabs();
     return res.data.data;
-  }, []);
+  }, [setUser, setMemberships]);
 
   const logout = useCallback(async () => {
     try {
@@ -59,8 +108,9 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
       setMemberships([]);
+      notifyOtherTabs();
     }
-  }, []);
+  }, [setUser, setMemberships]);
 
   const value = useMemo(() => {
     const isAdmin = !!user && ADMIN_ROLES.includes(user.role);

@@ -144,7 +144,10 @@ const MainLayout = () => {
             page fades in, so content never jumps mid-transition. */}
         <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo({ top: 0 })}>
           <m.div
-            key={location.pathname}
+            // Also keyed by account: if the signed-in user changes (e.g. in
+            // another tab), every page remounts and reloads its data for the
+            // new account instead of showing the previous person's data.
+            key={`${location.pathname}|${user?.id || "guest"}`}
             className="page-transition"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
