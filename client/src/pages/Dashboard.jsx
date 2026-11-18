@@ -1,34 +1,48 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getAllEvents, getAllRegistrations } from "../services/api";
+import { getAllEvents, getAllRegistrations, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 import Loader from "../components/Loader";
+import EmptyState from "../components/EmptyState";
 import { HiOutlineCalendar, HiOutlineTicket, HiOutlineUsers, HiOutlineCurrencyRupee } from "react-icons/hi";
 
 const Dashboard = () => {
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const fetchData = async () => {
+    try {
+      setLoadError("");
+      const [eventsRes, regsRes] = await Promise.all([getAllEvents(), getAllRegistrations()]);
+      setEvents(eventsRes.data.data);
+      setRegistrations(regsRes.data.data);
+    } catch (err) {
+      setLoadError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [eventsRes, regsRes] = await Promise.all([getAllEvents(), getAllRegistrations()]);
-        setEvents(eventsRes.data.data);
-        setRegistrations(regsRes.data.data);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
   if (loading) return <Loader />;
+  if (loadError) {
+    return (
+      <div className="page-container">
+        <EmptyState error title="Couldn't load the dashboard" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />
+      </div>
+    );
+  }
 
-  const totalRevenue = registrations.reduce((sum, r) => sum + (r.paymentDetails?.amountPaid || 0), 0);
+  // Only verified (Completed) payments count as revenue.
+  const totalRevenue = registrations
+    .filter((r) => r.paymentDetails?.status === "Completed")
+    .reduce((sum, r) => sum + (r.paymentDetails?.amountPaid || 0), 0);
   const checkedIn = registrations.filter((r) => r.checkInStatus).length;
 
   // Department distribution
@@ -67,7 +81,7 @@ const Dashboard = () => {
         />
         <StatCard
           icon={<HiOutlineCurrencyRupee />}
-          label="Total Revenue"
+          label="Verified Revenue"
           value={`₹${totalRevenue.toLocaleString()}`}
           color="orange"
         />

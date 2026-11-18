@@ -19,6 +19,14 @@ async function start() {
   const server = app.listen(config.port, () => {
     console.log(`🚀 API listening on port ${config.port} (${config.env})`);
   });
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`❌ Port ${config.port} is already in use. Stop the other server or set PORT in backend/.env.`);
+    } else {
+      console.error("❌ Server error:", err.message);
+    }
+    process.exit(1);
+  });
 
   const shutdown = (signal) => {
     console.log(`${signal} received, shutting down...`);

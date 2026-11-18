@@ -1,35 +1,51 @@
 import { useState, useEffect } from "react";
-import { getAllEvents, getAllRegistrations } from "../services/api";
+import { getAllEvents, getAllRegistrations, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
 import Loader from "../components/Loader";
 import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
+
+const pct = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
 import { HiOutlineChartBar, HiOutlineBadgeCheck, HiOutlineUserGroup, HiOutlineCurrencyRupee } from "react-icons/hi";
 
 const Analytics = () => {
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const fetchData = async () => {
+    try {
+      setLoadError("");
+      const [eventsRes, regsRes] = await Promise.all([getAllEvents(), getAllRegistrations()]);
+      setEvents(eventsRes.data.data);
+      setRegistrations(regsRes.data.data);
+    } catch (err) {
+      setLoadError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [eventsRes, regsRes] = await Promise.all([getAllEvents(), getAllRegistrations()]);
-        setEvents(eventsRes.data.data);
-        setRegistrations(regsRes.data.data);
-      } catch (err) {
-        console.error("Error loading analytics:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
   if (loading) return <Loader />;
+  if (loadError) {
+    return (
+      <div className="page-container">
+        <EmptyState error title="Couldn't load analytics" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />
+      </div>
+    );
+  }
 
   const totalRegs = registrations.length;
   const totalCheckedIn = registrations.filter(r => r.checkInStatus).length;
-  const totalRevenue = registrations.reduce((sum, r) => sum + (r.paymentDetails?.amountPaid || 0), 0);
+  // Only verified (Completed) payments count as revenue.
+  const totalRevenue = registrations
+    .filter(r => r.paymentDetails?.status === "Completed")
+    .reduce((sum, r) => sum + (r.paymentDetails?.amountPaid || 0), 0);
 
   // Department distribution
   const deptMap = registrations.reduce((acc, r) => {
@@ -56,9 +72,9 @@ const Analytics = () => {
 
       <div className="stats-grid">
         <StatCard icon={<HiOutlineUserGroup />} label="Total Registrations" value={totalRegs} color="blue" />
-        <StatCard icon={<HiOutlineBadgeCheck />} label="Check-In Rate" value={`${Math.round((totalCheckedIn / totalRegs) * 100)}%`} color="green" />
+        <StatCard icon={<HiOutlineBadgeCheck />} label="Check-In Rate" value={`${pct(totalCheckedIn, totalRegs)}%`} color="green" />
         <StatCard icon={<HiOutlineChartBar />} label="Active Events" value={events.length} color="purple" />
-        <StatCard icon={<HiOutlineCurrencyRupee />} label="Total Revenue" value={`₹${totalRevenue.toLocaleString()}`} color="orange" />
+        <StatCard icon={<HiOutlineCurrencyRupee />} label="Verified Revenue" value={`₹${totalRevenue.toLocaleString()}`} color="orange" />
       </div>
 
       <div className="analytics-grid">
@@ -115,7 +131,7 @@ const Analytics = () => {
               <div key={status} className={`status-summary-card status-${status.toLowerCase()}`}>
                 <span className="status-title">{status}</span>
                 <span className="status-value">{count}</span>
-                <span className="status-subtitle">{Math.round((count / totalRegs) * 100)}% of total</span>
+                <span className="status-subtitle">{pct(count, totalRegs)}% of total</span>
               </div>
             ))}
           </div>

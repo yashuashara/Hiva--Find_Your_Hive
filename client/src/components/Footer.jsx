@@ -1,7 +1,7 @@
 const Footer = () => {
   return (
-    <footer className="footer">
-      <p>&copy; {new Date().getFullYear()} CampusEvents — Built for Campus Event Management</p>
+    <footer className="app-footer">
+      <p>&copy; {new Date().getFullYear()} Event Engine &amp; Ticket Club</p>
     </footer>
   );
 };
