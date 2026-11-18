@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Outlet, NavLink, Link, useNavigate } from "react-router-dom";
+import { Suspense, useState } from "react";
+import { NavLink, Link, useLocation, useNavigate, useOutlet } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   HiOutlineCalendar,
@@ -20,15 +20,33 @@ import {
 } from "react-icons/hi";
 import Footer from "./Footer";
 import ThemeToggle from "./ThemeToggle";
+import { PageSkeleton } from "./Skeleton";
 import { useAuth } from "../context/AuthContext";
+import { AnimatePresence, m, spring, EASE } from "../lib/motion";
 
 const ROLE_LABELS = { student: "Student", uni_admin: "University Admin", super_admin: "Super Admin" };
 
 const navClass = ({ isActive }) => (isActive ? "nav-link active" : "nav-link");
 
+// A sidebar link. The active highlight is one shared element (layoutId)
+// that slides from the previous item to the new one.
+const NavItem = ({ to, end, icon: Icon, onClick, children }) => (
+  <NavLink to={to} end={end} className={navClass} onClick={onClick}>
+    {({ isActive }) => (
+      <>
+        {isActive && <m.span layoutId="nav-indicator" className="nav-indicator" transition={spring} />}
+        <Icon aria-hidden="true" />
+        {children}
+      </>
+    )}
+  </NavLink>
+);
+
 const MainLayout = () => {
   const { user, isAdmin, canManageEvents, activeClubs, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const outlet = useOutlet();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
 
@@ -65,55 +83,31 @@ const MainLayout = () => {
           <span>Event Engine</span>
         </Link>
         <nav className="sidebar-nav" aria-label="Main">
-          {!isAdmin && (
-            <NavLink to="/" end className={navClass} onClick={closeMenu}>
-              <HiOutlineHome aria-hidden="true" /> <span>Home</span>
-            </NavLink>
-          )}
-          <NavLink to="/events" className={navClass} onClick={closeMenu}>
-            <HiOutlineCalendar aria-hidden="true" /> <span>Events</span>
-          </NavLink>
-          <NavLink to="/clubs" end className={navClass} onClick={closeMenu}>
-            <HiOutlineUserGroup aria-hidden="true" /> <span>Clubs</span>
-          </NavLink>
-          {user && (
-            <NavLink to="/tickets" className={navClass} onClick={closeMenu}>
-              <HiOutlineTicket aria-hidden="true" /> <span>My tickets</span>
-            </NavLink>
-          )}
+          {!isAdmin && <NavItem to="/" end icon={HiOutlineHome} onClick={closeMenu}><span>Home</span></NavItem>}
+          <NavItem to="/events" icon={HiOutlineCalendar} onClick={closeMenu}><span>Events</span></NavItem>
+          <NavItem to="/clubs" end icon={HiOutlineUserGroup} onClick={closeMenu}><span>Clubs</span></NavItem>
+          {user && <NavItem to="/tickets" icon={HiOutlineTicket} onClick={closeMenu}><span>My tickets</span></NavItem>}
 
           {canManageEvents && (
             <>
               <span className="nav-section">Organize</span>
-              {(isAdmin || activeClubs.some((m) => ["owner", "organizer"].includes(m.role))) && (
-                <NavLink to="/manage/dashboard" className={navClass} onClick={closeMenu}>
-                  <HiOutlinePresentationChartLine aria-hidden="true" /> <span>Club dashboard</span>
-                </NavLink>
+              {(isAdmin || activeClubs.some((mb) => ["owner", "organizer"].includes(mb.role))) && (
+                <NavItem to="/manage/dashboard" icon={HiOutlinePresentationChartLine} onClick={closeMenu}>
+                  <span>Club dashboard</span>
+                </NavItem>
               )}
-              <NavLink to="/manage/events" className={navClass} onClick={closeMenu}>
-                <HiOutlineClipboardList aria-hidden="true" /> <span>Manage events</span>
-              </NavLink>
+              <NavItem to="/manage/events" icon={HiOutlineClipboardList} onClick={closeMenu}><span>Manage events</span></NavItem>
             </>
           )}
 
           {isAdmin && (
             <>
               <span className="nav-section">Admin</span>
-              <NavLink to="/" end className={navClass} onClick={closeMenu}>
-                <HiOutlineHome aria-hidden="true" /> <span>Dashboard</span>
-              </NavLink>
-              <NavLink to="/admin/approvals" className={navClass} onClick={closeMenu}>
-                <HiOutlineBadgeCheck aria-hidden="true" /> <span>Approvals</span>
-              </NavLink>
-              <NavLink to="/registrations" className={navClass} onClick={closeMenu}>
-                <HiOutlineCollection aria-hidden="true" /> <span>Registrations</span>
-              </NavLink>
-              <NavLink to="/analytics" className={navClass} onClick={closeMenu}>
-                <HiOutlineChartBar aria-hidden="true" /> <span>Reports</span>
-              </NavLink>
-              <NavLink to="/admin/users" className={navClass} onClick={closeMenu}>
-                <HiOutlineUsers aria-hidden="true" /> <span>Users</span>
-              </NavLink>
+              <NavItem to="/" end icon={HiOutlineHome} onClick={closeMenu}><span>Dashboard</span></NavItem>
+              <NavItem to="/admin/approvals" icon={HiOutlineBadgeCheck} onClick={closeMenu}><span>Approvals</span></NavItem>
+              <NavItem to="/registrations" icon={HiOutlineCollection} onClick={closeMenu}><span>Registrations</span></NavItem>
+              <NavItem to="/analytics" icon={HiOutlineChartBar} onClick={closeMenu}><span>Reports</span></NavItem>
+              <NavItem to="/admin/users" icon={HiOutlineUsers} onClick={closeMenu}><span>Users</span></NavItem>
             </>
           )}
         </nav>
@@ -122,22 +116,19 @@ const MainLayout = () => {
           <ThemeToggle />
           {user ? (
             <>
-              <NavLink to="/profile" className={navClass} onClick={closeMenu}>
-                <HiOutlineUserCircle aria-hidden="true" />
+              <NavItem to="/profile" icon={HiOutlineUserCircle} onClick={closeMenu}>
                 <span className="sidebar-user-info">
                   <span className="sidebar-user-name">{user.name}</span>
                   <span className="sidebar-user-role">{ROLE_LABELS[user.role] || user.role}</span>
                 </span>
-              </NavLink>
+              </NavItem>
               <button type="button" className="nav-link nav-button" onClick={handleLogout}>
                 <HiOutlineLogout aria-hidden="true" /> <span>Sign out</span>
               </button>
             </>
           ) : (
             <>
-              <NavLink to="/login" className={navClass} onClick={closeMenu}>
-                <HiOutlineLogin aria-hidden="true" /> <span>Sign in</span>
-              </NavLink>
+              <NavItem to="/login" icon={HiOutlineLogin} onClick={closeMenu}><span>Sign in</span></NavItem>
               <Link to="/signup" className="btn btn-primary btn-sm" onClick={closeMenu}>Create account</Link>
             </>
           )}
@@ -147,7 +138,22 @@ const MainLayout = () => {
       {menuOpen && <div className="sidebar-backdrop" onClick={closeMenu} aria-hidden="true" />}
 
       <main id="main" className="main-content">
-        <Outlet />
+        {/* Page transitions are keyed by PATH only: changing filters or tabs
+            (the query string) never re-animates or remounts the page.
+            The old page fades out, the window scrolls to the top, then the new
+            page fades in, so content never jumps mid-transition. */}
+        <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo({ top: 0 })}>
+          <m.div
+            key={location.pathname}
+            className="page-transition"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16, ease: EASE }}
+          >
+            <Suspense fallback={<PageSkeleton />}>{outlet}</Suspense>
+          </m.div>
+        </AnimatePresence>
         <Footer />
       </main>
     </div>

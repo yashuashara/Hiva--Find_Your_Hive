@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import Loader from "./Loader";
+import { PageSkeleton } from "./Skeleton";
 import EmptyState from "./EmptyState";
 
 // Guards a group of routes. This is a UX convenience only: the API enforces
@@ -9,7 +9,7 @@ const ProtectedRoute = ({ roles }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <Loader label="Checking your session..." />;
+  if (loading) return <PageSkeleton />;
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;

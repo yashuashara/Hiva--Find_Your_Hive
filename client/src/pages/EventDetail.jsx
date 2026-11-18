@@ -15,7 +15,7 @@ import {
   errorCode,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import Loader from "../components/Loader";
+import { SkeletonDetail } from "../components/Skeleton";
 import StatCard from "../components/StatCard";
 import EmptyState from "../components/EmptyState";
 import StatusBadge from "../components/StatusBadge";
@@ -166,7 +166,7 @@ const EventDetail = () => {
     }
   };
 
-  if (loading || authLoading) return <Loader />;
+  if (loading || authLoading) return <SkeletonDetail />;
 
   const backLink = (
     <Link to="/events" className="back-link">

@@ -7,7 +7,8 @@ import {
 } from "../services/api";
 import ImageUpload from "../components/ImageUpload";
 import { useAuth } from "../context/AuthContext";
-import Loader from "../components/Loader";
+import { SkeletonDetail, SkeletonTable } from "../components/Skeleton";
+import { AnimatedList } from "../lib/motion";
 import EmptyState from "../components/EmptyState";
 import StatusBadge from "../components/StatusBadge";
 import ReasonDialog from "../components/ReasonDialog";
@@ -83,7 +84,7 @@ const TeamPanel = ({ club, canManageClub, isAdmin, onChange }) => {
     <section className="detail-card">
       <h3>Team</h3>
       {loading ? (
-        <Loader />
+        <SkeletonTable rows={3} />
       ) : (
         <ul className="member-list">
           {members.map((m) => (
@@ -252,7 +253,7 @@ const ClubDetail = () => {
     }
   };
 
-  if (loading || authLoading) return <Loader />;
+  if (loading || authLoading) return <SkeletonDetail />;
   const back = <Link to="/clubs" className="back-link"><HiArrowLeft aria-hidden="true" /> Clubs</Link>;
   if (notFound) return <div className="page-container">{back}<EmptyState title="Club not found" /></div>;
   if (loadError) return <div className="page-container">{back}<EmptyState error title="Couldn't load this club" message={loadError} onRetry={load} /></div>;
@@ -347,7 +348,7 @@ const ClubDetail = () => {
           <section className="dashboard-section">
             <h2>Upcoming events</h2>
             {upcoming.length ? (
-              <div className="cards-grid">{upcoming.map((e) => <EventCard key={e._id} event={e} />)}</div>
+              <AnimatedList className="cards-grid" items={upcoming} getKey={(e) => e._id} render={(e) => <EventCard event={e} />} />
             ) : (
               <EmptyState title="No upcoming events" message="Check back soon." />
             )}
@@ -355,7 +356,7 @@ const ClubDetail = () => {
           {past.length > 0 && (
             <section className="dashboard-section">
               <h2>Past events</h2>
-              <div className="cards-grid">{past.map((e) => <EventCard key={e._id} event={e} />)}</div>
+              <AnimatedList className="cards-grid" items={past} getKey={(e) => e._id} render={(e) => <EventCard event={e} />} />
             </section>
           )}
         </>
@@ -368,8 +369,8 @@ const ClubDetail = () => {
           <section className="detail-card">
             <h3>Team</h3>
             <ul className="member-list">
-              {club.team.map((m, i) => (
-                <li key={i} className="member-row"><span className="cell-bold">{m.name}</span> <span className="badge badge--event">{ROLE_LABEL[m.role]}</span></li>
+              {club.team.map((m) => (
+                <li key={`${m.role}-${m.name}`} className="member-row"><span className="cell-bold">{m.name}</span> <span className="badge badge--event">{ROLE_LABEL[m.role]}</span></li>
               ))}
             </ul>
           </section>

@@ -221,7 +221,10 @@ h1, h2, h3 { line-height: 1.25; letter-spacing: -0.015em; }
 }
 .nav-link svg { font-size: 1.15rem; flex-shrink: 0; }
 .nav-link:hover { background: var(--surface-hover); color: var(--text); }
-.nav-link.active { background: var(--primary-soft); color: var(--primary-text); font-weight: 600; }
+.nav-link { position: relative; isolation: isolate; }
+.nav-link.active { color: var(--primary-text); font-weight: 600; }
+/* Shared highlight that slides between nav items (framer-motion layoutId). */
+.nav-indicator { position: absolute; inset: 0; z-index: -1; border-radius: var(--radius-sm); background: var(--primary-soft); }
 .nav-button { width: 100%; background: none; border: none; cursor: pointer; text-align: left; }
 .sidebar-user {
   margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border);
@@ -388,7 +391,9 @@ h1, h2, h3 { line-height: 1.25; letter-spacing: -0.015em; }
   color: var(--text-2); font-weight: 600; font-size: 0.86rem; cursor: pointer;
 }
 .tab:hover { color: var(--text); }
-.tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.tab { position: relative; isolation: isolate; }
+.tab.active { color: var(--text); }
+.tab-indicator { position: absolute; inset: 0; z-index: -1; border-radius: 6px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1.75rem; }
 .pagination-info { color: var(--text-3); font-size: 0.85rem; }
 
@@ -741,3 +746,22 @@ h1, h2, h3 { line-height: 1.25; letter-spacing: -0.015em; }
   .hbar-fill, .meter-fill { background: CanvasText; }
   .badge { border: 1px solid CanvasText; }
 }
+
+/* ---------- Smooth transitions (no flashes, no layout jumps) ---------- */
+/* Results keep their previous content while new data loads; it is dimmed
+   instead of removed, and the region keeps a minimum height so the footer
+   and pagination never jump up while a list is momentarily short. */
+.results-region { position: relative; min-height: 420px; transition: opacity 0.2s var(--ease); }
+.results-region.is-refreshing { opacity: 0.55; }
+.results-region--compact { min-height: 200px; }
+.page-transition { display: flex; flex-direction: column; flex: 1; }
+/* Animated list wrappers must not change grid/list layout. */
+.motion-item { display: flex; flex-direction: column; min-width: 0; }
+.motion-item > * { flex: 1; }
+.inline-error { margin-bottom: 1rem; }
+/* Reserve space for things that load later. */
+.stats-grid { min-height: 84px; }
+.chart-card { min-height: 280px; }
+.skeleton-table { padding: 0.5rem 1rem; }
+.skeleton-row { display: flex; gap: 1.5rem; align-items: center; padding: 0.95rem 0; border-bottom: 1px solid var(--border); }
+.skeleton-row:last-child { border-bottom: none; }

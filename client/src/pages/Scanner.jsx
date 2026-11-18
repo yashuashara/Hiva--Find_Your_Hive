@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import QrScanner from "qr-scanner";
 import { getEventById, getAttendance, scanTicket, errorMessage } from "../services/api";
-import Loader from "../components/Loader";
+import { SkeletonDetail } from "../components/Skeleton";
 import EmptyState from "../components/EmptyState";
 import { formatTime } from "../utils/format";
 import { HiArrowLeft, HiCheckCircle, HiExclamationCircle, HiXCircle } from "react-icons/hi";
@@ -167,7 +167,7 @@ const Scanner = () => {
     setManual("");
   };
 
-  if (loading) return <Loader />;
+  if (loading) return <SkeletonDetail />;
   if (loadError) {
     return (
       <div className="page-container">

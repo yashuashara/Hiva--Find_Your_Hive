@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { getAllRegistrations, listManageableEvents, createRegistration, setCheckIn, cancelRegistration, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
-import Loader from "../components/Loader";
+import { PageSkeleton } from "../components/Skeleton";
 import EmptyState from "../components/EmptyState";
+import useUrlFilters from "../hooks/useUrlFilters";
+import { AnimatePresence, m, rowMotion } from "../lib/motion";
 import StatusBadge from "../components/StatusBadge";
 import { HiPlus, HiSearch, HiCheck, HiX, HiTrash } from "react-icons/hi";
 
@@ -25,15 +27,21 @@ const emptyForm = (eventId = "") => ({
   paymentMethod: "UPI"
 });
 
+const FILTER_DEFAULTS = { q: "", event: "All", dept: "All", checkin: "All" };
+
 const Registrations = () => {
   const [registrations, setRegistrations] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState("All");
-  const [selectedDept, setSelectedDept] = useState("All");
-  const [checkInFilter, setCheckInFilter] = useState("All");
+  // Filters live in the URL (replace, no scroll jump); filtering itself happens
+  // here in the browser because every registration is already loaded.
+  const [filters, setFilters] = useUrlFilters(FILTER_DEFAULTS);
+  const { q: searchTerm, event: selectedEvent, dept: selectedDept, checkin: checkInFilter } = filters;
+  const setSearchTerm = (v) => setFilters({ q: v });
+  const setSelectedEvent = (v) => setFilters({ event: v });
+  const setSelectedDept = (v) => setFilters({ dept: v });
+  const setCheckInFilter = (v) => setFilters({ checkin: v });
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState(emptyForm());
@@ -137,7 +145,7 @@ const Registrations = () => {
 
   const set = (name) => (e) => setFormData({ ...formData, [name]: e.target.value });
 
-  if (loading) return <Loader />;
+  if (loading) return <PageSkeleton variant="table" />;
   if (loadError) {
     return (
       <div className="page-container">
@@ -197,6 +205,7 @@ const Registrations = () => {
         Showing <strong>{filteredRegistrations.length}</strong> of <strong>{registrations.length}</strong> registrations
       </div>
 
+      <div className="results-region">
       {filteredRegistrations.length === 0 ? (
         <EmptyState
           title="No registrations found"
@@ -219,8 +228,9 @@ const Registrations = () => {
               </tr>
             </thead>
             <tbody>
+              <AnimatePresence initial={false}>
               {filteredRegistrations.map((reg) => (
-                <tr key={reg.ticketId}>
+                <m.tr key={reg.ticketId} {...rowMotion}>
                   <td><span className="badge badge--id">{reg.ticketId}</span></td>
                   <td><code>{reg.studentId}</code></td>
                   <td className="cell-bold">{reg.studentName}</td>
@@ -261,12 +271,14 @@ const Registrations = () => {
                       )
                     )}
                   </td>
-                </tr>
+                </m.tr>
               ))}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>
       )}
+      </div>
 
       {/* New Registration Modal */}
       {showModal && (

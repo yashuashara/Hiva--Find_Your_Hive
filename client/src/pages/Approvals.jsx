@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getApprovals, reviewClub, transitionEvent, approveClubMember, removeClubMember, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
-import Loader from "../components/Loader";
+import { PageSkeleton } from "../components/Skeleton";
+import { AnimatePresence, m, itemMotion } from "../lib/motion";
 import EmptyState from "../components/EmptyState";
 import ReasonDialog from "../components/ReasonDialog";
 import { formatDateRange, formatDate } from "../utils/format";
@@ -42,8 +43,9 @@ const Approvals = () => {
     }
   };
 
-  if (loading) return <Loader />;
-  if (loadError) return <div className="page-container"><EmptyState error title="Couldn't load approvals" message={loadError} onRetry={load} /></div>;
+  if (loading) return <PageSkeleton variant="table" />;
+  // Only replace the page with an error if nothing has loaded yet.
+  if (loadError && !data) return <div className="page-container"><EmptyState error title="Couldn't load approvals" message={loadError} onRetry={load} /></div>;
 
   const { clubs, events, memberships } = data;
   const total = clubs.length + events.length + memberships.length;
@@ -58,8 +60,9 @@ const Approvals = () => {
           <EmptyState title="No club requests" />
         ) : (
           <ul className="review-list">
+            <AnimatePresence initial={false}>
             {clubs.map((c) => (
-              <li key={c._id} className="review-item">
+              <m.li key={c._id} className="review-item" {...itemMotion}>
                 <div>
                   <Link className="text-link cell-bold" to={`/clubs/${c.slug}`}>{c.name}</Link>
                   <p className="muted">
@@ -71,8 +74,9 @@ const Approvals = () => {
                   <button type="button" className="btn btn-primary btn-sm" onClick={() => act(() => reviewClub(c._id, "approve"), `${c.name} approved`)}>Approve</button>
                   <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => setDialog({ kind: "club", id: c._id, name: c.name })}>Reject</button>
                 </div>
-              </li>
+              </m.li>
             ))}
+            </AnimatePresence>
           </ul>
         )}
       </section>
@@ -83,8 +87,9 @@ const Approvals = () => {
           <EmptyState title="No events to review" />
         ) : (
           <ul className="review-list">
+            <AnimatePresence initial={false}>
             {events.map((e) => (
-              <li key={e._id} className="review-item">
+              <m.li key={e._id} className="review-item" {...itemMotion}>
                 <div>
                   <Link className="text-link cell-bold" to={`/events/${encodeURIComponent(e._id)}`}>{e.title}</Link>
                   <p className="muted">{e.organizerClub} · {formatDateRange(e.startsAt, e.endsAt)} · {e.venue} · {e.capacity} seats</p>
@@ -93,8 +98,9 @@ const Approvals = () => {
                   <button type="button" className="btn btn-primary btn-sm" onClick={() => act(() => transitionEvent(e._id, "approve"), `${e.title} approved`)}>Approve</button>
                   <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => setDialog({ kind: "event", id: e._id, name: e.title })}>Reject</button>
                 </div>
-              </li>
+              </m.li>
             ))}
+            </AnimatePresence>
           </ul>
         )}
       </section>
@@ -105,26 +111,28 @@ const Approvals = () => {
           <EmptyState title="No team requests" />
         ) : (
           <ul className="review-list">
-            {memberships.map((m) => (
-              <li key={m._id} className="review-item">
+            <AnimatePresence initial={false}>
+            {memberships.map((mb) => (
+              <m.li key={mb._id} className="review-item" {...itemMotion}>
                 <div>
-                  <span className="cell-bold">{m.user.name}</span> <span className="muted">({m.user.email})</span>
+                  <span className="cell-bold">{mb.user.name}</span> <span className="muted">({mb.user.email})</span>
                   <p className="muted">
-                    wants to be <strong>{m.role}</strong> of <Link className="text-link" to={`/clubs/${m.club.slug}`}>{m.club.name}</Link>
+                    wants to be <strong>{mb.role}</strong> of <Link className="text-link" to={`/clubs/${mb.club.slug}`}>{mb.club.name}</Link>
                   </p>
                 </div>
                 <div className="member-actions">
-                  <button type="button" className="btn btn-primary btn-sm" onClick={() => act(() => approveClubMember(m.club._id, m._id), "Approved")}>Approve</button>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => act(() => approveClubMember(mb.club._id, mb._id), "Approved")}>Approve</button>
                   <button
                     type="button"
                     className="btn btn-danger-outline btn-sm"
-                    onClick={() => window.confirm("Decline this request?") && act(() => removeClubMember(m.club._id, m._id), "Declined")}
+                    onClick={() => window.confirm("Decline this request?") && act(() => removeClubMember(mb.club._id, mb._id), "Declined")}
                   >
                     Decline
                   </button>
                 </div>
-              </li>
+              </m.li>
             ))}
+            </AnimatePresence>
           </ul>
         )}
       </section>

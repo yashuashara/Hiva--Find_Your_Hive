@@ -18,6 +18,7 @@ const ClubDashboard = () => {
   const [clubs, setClubs] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   // Which clubs can this person see dashboards for?
   useEffect(() => {
@@ -38,13 +39,15 @@ const ClubDashboard = () => {
 
   const load = useCallback(async () => {
     if (!clubId) return;
-    setData(null);
+    setRefreshing(true);
     setError("");
     try {
       const res = await getClubAnalytics(clubId);
       setData(res.data.data);
+      setRefreshing(false);
     } catch (err) {
       setError(errorMessage(err));
+      setRefreshing(false);
     }
   }, [clubId]);
 
@@ -81,12 +84,13 @@ const ClubDashboard = () => {
         }
       />
 
-      {error ? (
+      {error && !data ? (
         <EmptyState error title="Couldn't load this dashboard" message={error} onRetry={load} />
       ) : !data ? (
         <SkeletonStats />
       ) : (
-        <>
+        <div className={`results-region results-region--compact ${refreshing ? "is-refreshing" : ""}`} aria-busy={refreshing}>
+          {error && <div className="notice notice--danger inline-error" role="alert">{error}</div>}
           <div className="stats-grid">
             <StatCard icon={<HiOutlineCalendar />} label={`Events · ${t.upcoming} upcoming`} value={t.events} color="blue" />
             <StatCard icon={<HiOutlineTicket />} label={`Registrations · ${data.followers} followers`} value={t.registrations} color="purple" />
@@ -103,8 +107,8 @@ const ClubDashboard = () => {
               <h3>Recent registrations</h3>
               {data.recentRegistrations.length ? (
                 <ul className="member-list">
-                  {data.recentRegistrations.map((r, i) => (
-                    <li key={i} className="member-row">
+                  {data.recentRegistrations.map((r) => (
+                    <li key={`${r.eventId}-${r.at}-${r.name}`} className="member-row">
                       <div>
                         <span className="cell-bold">{r.name}</span>
                         <div className="muted">{r.event}</div>
@@ -126,7 +130,7 @@ const ClubDashboard = () => {
             </div>
             <EventPerformanceTable events={data.events} />
           </section>
-        </>
+        </div>
       )}
     </div>
   );

@@ -2,7 +2,8 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Loader from "./components/Loader";
+import { PageSkeleton } from "./components/Skeleton";
+import { MotionProvider } from "./lib/motion";
 import { AuthProvider, ADMIN_ROLES, useAuth } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
@@ -32,7 +33,7 @@ const MyTickets = lazy(() => import("./pages/MyTickets"));
 // admins the platform dashboard.
 function Home() {
   const { loading, isAdmin, user } = useAuth();
-  if (loading) return <Loader />;
+  if (loading) return <PageSkeleton />;
   if (!user) return <Landing />;
   return isAdmin ? <Dashboard /> : <StudentHome />;
 }
@@ -40,7 +41,7 @@ function Home() {
 // Manage-events pages: admins and active club team members.
 function RequireManager() {
   const { loading, canManageEvents, user } = useAuth();
-  if (loading) return <Loader />;
+  if (loading) return <PageSkeleton />;
   if (!user) return <Navigate to="/login" replace />;
   return canManageEvents ? <ProtectedRoute /> : <Navigate to="/events" replace />;
 }
@@ -48,8 +49,9 @@ function RequireManager() {
 function App() {
   return (
     <AuthProvider>
+      <MotionProvider>
       <Router>
-        <Suspense fallback={<Loader />}>
+        <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -92,6 +94,7 @@ function App() {
         </Routes>
         </Suspense>
       </Router>
+      </MotionProvider>
     </AuthProvider>
   );
 }

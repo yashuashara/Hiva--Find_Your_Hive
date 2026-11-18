@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { createEvent, updateEvent, getEventById, listClubs, errorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/PageHeader";
-import Loader from "../components/Loader";
+import { SkeletonDetail } from "../components/Skeleton";
 import EmptyState from "../components/EmptyState";
 import ImageUpload from "../components/ImageUpload";
 import { toLocalInput, fromLocalInput } from "../utils/format";
@@ -134,7 +134,7 @@ const EventForm = () => {
     }
   };
 
-  if (loading) return <Loader />;
+  if (loading) return <SkeletonDetail />;
   if (loadError) {
     return (
       <div className="page-container">
