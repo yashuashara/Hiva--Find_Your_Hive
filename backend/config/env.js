@@ -53,6 +53,13 @@ const config = {
   // Number of reverse proxies in front of the app (Render/Railway/Nginx = 1).
   trustProxy: Number(process.env.TRUST_PROXY || 0),
   superAdminEmail: (process.env.SUPER_ADMIN_EMAIL || "").trim().toLowerCase(),
+  // The university this deployment serves. This is tenant data only; it does
+  // not imply the university endorses or operates the platform.
+  defaultUniversity: {
+    slug: process.env.DEFAULT_UNIVERSITY_SLUG || "mit-wpu",
+    name: process.env.DEFAULT_UNIVERSITY_NAME || "MIT World Peace University",
+    shortName: process.env.DEFAULT_UNIVERSITY_SHORT_NAME || "MIT-WPU",
+  },
   rateLimit: {
     authPer15Min: Number(process.env.AUTH_RATE_LIMIT || 10),
     apiPer15Min: Number(process.env.API_RATE_LIMIT || 600),

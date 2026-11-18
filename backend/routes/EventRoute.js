@@ -1,41 +1,54 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  getAllEvents,
-  getEventById,
-  createEvent,
-  updateEvent,
-  deleteEvent,
-  getAllRegistrations,
-  getRegistrationsByEvent,
-  getRegistrationByTicket,
-  createRegistration,
-  updateRegistration,
-  deleteRegistration
-} = require("../controller/EventController");
-const { requireAdmin } = require("../middleware/auth");
+const events = require("../controller/EventController");
+const regs = require("../controller/RegistrationController");
+const { requireAuth, requireAdmin } = require("../middleware/auth");
 const validate = require("../middleware/validate");
 const s = require("../validators/schemas");
 
-// ==================== EVENT ROUTES ====================
-// Reading events is public; changing them requires an admin.
-// (Club organizers get scoped write access when clubs are introduced.)
-router.get("/events", getAllEvents);
-router.get("/events/:id", validate({ params: s.eventIdParam }), getEventById);
-router.post("/events", requireAdmin, validate({ body: s.createEventSchema }), createEvent);
-router.put("/events/:id", requireAdmin, validate({ params: s.eventIdParam, body: s.updateEventSchema }), updateEvent);
-router.delete("/events/:id", requireAdmin, validate({ params: s.eventIdParam }), deleteEvent);
+// Fine-grained permissions (club roles, admin scope) are checked inside the
+// controllers via services/permissions.js. Routes only require sign-in.
 
-// ==================== REGISTRATION ROUTES ====================
-// Registrations contain student data, so every route here is admin-only.
-// Students will get their own "my tickets" endpoints in the ticketing phase.
-router.use("/registrations", requireAdmin);
-router.get("/registrations", getAllRegistrations);
-router.get("/registrations/event/:eventId", validate({ params: s.eventIdForRegsParam }), getRegistrationsByEvent);
-router.get("/registrations/:ticketId", validate({ params: s.ticketParam }), getRegistrationByTicket);
-router.post("/registrations", validate({ body: s.createRegistrationSchema }), createRegistration);
-router.put("/registrations/:ticketId", validate({ params: s.ticketParam, body: s.checkInSchema }), updateRegistration);
-router.delete("/registrations/:ticketId", validate({ params: s.ticketParam }), deleteRegistration);
+// ==================== EVENTS ====================
+router.get("/events", validate({ query: s.listEventsQuery }), events.listEvents);
+router.get("/manage/events", requireAuth, validate({ query: s.manageEventsQuery }), events.listManageableEvents);
+router.post("/events", requireAuth, validate({ body: s.createEventSchema }), events.createEvent);
+router.get("/events/:id", validate({ params: s.eventIdParam }), events.getEvent);
+router.put("/events/:id", requireAuth, validate({ params: s.eventIdParam, body: s.updateEventSchema }), events.updateEvent);
+router.delete("/events/:id", requireAuth, validate({ params: s.eventIdParam }), events.deleteEvent);
+
+// Attendees (organizers of the event's club and admins)
+router.get(
+  "/events/:id/registrations/export",
+  requireAuth,
+  validate({ params: s.eventIdParam }),
+  regs.exportEventRegistrations
+);
+router.get(
+  "/events/:id/registrations",
+  requireAuth,
+  validate({ params: s.eventIdParam, query: s.listRegistrationsQuery }),
+  regs.listEventRegistrations
+);
+
+// Students register themselves
+router.post("/events/:id/register", requireAuth, validate({ params: s.eventIdParam, body: s.selfRegisterSchema }), regs.registerSelf);
+
+// Lifecycle: submit | withdraw | approve | reject | publish | cancel | complete
+router.post("/events/:id/:action", requireAuth, validate({ params: s.transitionParam, body: s.transitionBody }), events.transitionEvent);
+
+// ==================== REGISTRATIONS ====================
+router.get("/registrations", requireAdmin, regs.listAllRegistrations);
+router.get(
+  "/registrations/event/:eventId",
+  requireAuth,
+  validate({ params: s.eventIdForRegsParam, query: s.listRegistrationsQuery }),
+  regs.listEventRegistrations
+);
+router.get("/registrations/:ticketId", requireAuth, validate({ params: s.ticketParam }), regs.getRegistrationByTicket);
+router.post("/registrations", requireAuth, validate({ body: s.createRegistrationSchema }), regs.createWalkInRegistration);
+router.put("/registrations/:ticketId", requireAuth, validate({ params: s.ticketParam, body: s.checkInSchema }), regs.updateCheckIn);
+router.delete("/registrations/:ticketId", requireAuth, validate({ params: s.ticketParam }), regs.cancelRegistration);
 
 module.exports = router;

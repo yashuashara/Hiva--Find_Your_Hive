@@ -69,6 +69,9 @@ function createApp({ sessionStore, authRateLimit, apiRateLimit } = {}) {
   );
   app.use("/api/auth", require("./routes/AuthRoute")(authLimiter));
   app.use("/api/campus", require("./routes/EventRoute"));
+  app.use("/api/clubs", require("./routes/ClubRoute"));
+  app.use("/api/me", require("./routes/MeRoute"));
+  app.use("/api/admin", require("./routes/AdminRoute"));
 
   app.use("/api", notFound);
   app.use(errorHandler);

@@ -20,9 +20,23 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ROLES, default: "student" },
     status: { type: String, enum: ["active", "suspended"], default: "active" },
+    university: { type: mongoose.Schema.Types.ObjectId, ref: "University" },
+    // Needed to register for events. Private: only the student, admins and
+    // the organizers of events they register for can see it.
+    profile: {
+      prn: { type: String, trim: true, uppercase: true, maxlength: 30 },
+      department: { type: String, trim: true, maxlength: 100 },
+      year: { type: Number, min: 1, max: 6 },
+    },
     lastLoginAt: Date,
   },
   { timestamps: true }
+);
+
+// A PRN can belong to only one account.
+userSchema.index(
+  { "profile.prn": 1 },
+  { unique: true, partialFilterExpression: { "profile.prn": { $type: "string" } } }
 );
 
 userSchema.set("toJSON", {

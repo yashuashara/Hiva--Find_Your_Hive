@@ -2,6 +2,7 @@ const User = require("../models/User");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
 const { hashPassword, verifyPassword, getDummyHash } = require("../utils/password");
+const { getDefaultUniversity } = require("../services/university");
 
 const SESSION_COOKIE = "ee.sid";
 
@@ -31,7 +32,13 @@ const signup = asyncHandler(async (req, res) => {
   const exists = await User.exists({ email });
   if (exists) throw new AppError(409, "An account with this email already exists");
 
-  const user = await User.create({ name, email, passwordHash: await hashPassword(password) });
+  const university = await getDefaultUniversity();
+  const user = await User.create({
+    name,
+    email,
+    university: university._id,
+    passwordHash: await hashPassword(password),
+  });
   await startSession(req, user);
   res.status(201).json({ success: true, data: user });
 });
@@ -67,4 +74,22 @@ const me = (req, res) => {
   res.json({ success: true, data: req.user });
 };
 
-module.exports = { signup, login, logout, me, SESSION_COOKIE };
+// PATCH /api/auth/me — update your own name and student profile.
+// Role, email and status are not accepted here (stripped by validation).
+const updateMe = asyncHandler(async (req, res) => {
+  const { name, profile } = req.body;
+  const $set = {};
+  if (name !== undefined) $set.name = name;
+  for (const [key, value] of Object.entries(profile || {})) $set[`profile.${key}`] = value;
+  if (!Object.keys($set).length) throw new AppError(400, "Nothing to update");
+
+  try {
+    const user = await User.findByIdAndUpdate(req.user._id, { $set }, { new: true, runValidators: true });
+    res.json({ success: true, data: user });
+  } catch (err) {
+    if (err.code === 11000) throw new AppError(409, "That PRN is already linked to another account");
+    throw err;
+  }
+});
+
+module.exports = { signup, login, logout, me, updateMe, SESSION_COOKIE };

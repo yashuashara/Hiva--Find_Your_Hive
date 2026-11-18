@@ -1,14 +1,19 @@
-// Shared test setup: an in-memory MongoDB per test file, plus helpers to
-// create users and logged-in HTTP clients.
+// Shared test setup: a throwaway database per test file, plus helpers to
+// create users, clubs, events and logged-in HTTP clients.
 const mongoose = require("mongoose");
 const request = require("supertest");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
 const createApp = require("../app");
 const User = require("../models/User");
-require("../models/Event");
+const Club = require("../models/Club");
+const ClubMembership = require("../models/ClubMembership");
+const Event = require("../models/Event");
 require("../models/Registration");
+require("../models/University");
+require("../models/AuditLog");
 const { hashPassword } = require("../utils/password");
+const { getDefaultUniversity } = require("../services/university");
 
 let mongod;
 
@@ -51,16 +56,36 @@ function client(app) {
     get: withHeader("get"),
     post: withHeader("post"),
     put: withHeader("put"),
+    patch: withHeader("patch"),
     delete: withHeader("delete"),
     raw: agent,
   };
 }
 
 const PASSWORD = "correct-horse-battery";
+let userCounter = 0;
 
-async function createUser({ email, role = "student", name = "Test User", status = "active" }) {
-  return User.create({ email, name, role, status, passwordHash: await hashPassword(PASSWORD) });
+async function createUser({ email, role = "student", name = "Test User", status = "active", profile } = {}) {
+  const university = await getDefaultUniversity();
+  return User.create({
+    email: email || `user${++userCounter}@example.com`,
+    name,
+    role,
+    status,
+    profile,
+    university: university._id,
+    passwordHash: await hashPassword(PASSWORD),
+  });
 }
+
+// A student with a complete profile, ready to self-register.
+let prnCounter = 1000;
+const createStudent = (overrides = {}) =>
+  createUser({
+    name: "Student Person",
+    profile: { prn: `PRN${++prnCounter}`, department: "Computer Science", year: 2 },
+    ...overrides,
+  });
 
 async function loggedInClient(app, user) {
   const c = client(app);
@@ -69,13 +94,61 @@ async function loggedInClient(app, user) {
   return c;
 }
 
-const sampleEvent = (overrides = {}) => ({
+// Creates a club and active memberships: createClub({ owner: user, organizers: [user], volunteers: [user] })
+let clubCounter = 0;
+async function createClub({ name, status = "approved", owner, organizers = [], volunteers = [] } = {}) {
+  const university = await getDefaultUniversity();
+  const n = ++clubCounter;
+  const club = await Club.create({
+    university: university._id,
+    name: name || `Club ${n}`,
+    slug: `club-${n}`,
+    status,
+    category: "Technical",
+  });
+  const add = (user, role) => ClubMembership.create({ club: club._id, user: user._id, role, status: "active" });
+  if (owner) await add(owner, "owner");
+  for (const u of organizers) await add(u, "organizer");
+  for (const u of volunteers) await add(u, "volunteer");
+  return club;
+}
+
+const HOUR = 60 * 60 * 1000;
+const inHours = (h) => new Date(Date.now() + h * HOUR);
+
+// Inserts an event directly (bypassing the API). Defaults to a published
+// event tomorrow with open registration.
+let eventCounter = 0;
+async function createEvent(club, overrides = {}) {
+  const capacity = overrides.capacity ?? 50;
+  return Event.create({
+    _id: `EVT${++eventCounter}`,
+    title: "HackCampus",
+    category: "Technical",
+    venue: "Auditorium A",
+    organizerClub: club.name,
+    club: club._id,
+    university: club.university,
+    status: "published",
+    startsAt: inHours(24),
+    endsAt: inHours(26),
+    entryFee: 0,
+    capacity,
+    seatsAvailable: capacity,
+    ...overrides,
+  });
+}
+
+// Request body for POST /api/campus/events
+const eventBody = (club, overrides = {}) => ({
+  clubId: String(club._id),
   title: "HackCampus",
   category: "Technical",
-  organizerClub: "Coding Club",
   venue: "Auditorium A",
   capacity: 50,
   entryFee: 0,
+  startsAt: inHours(48).toISOString(),
+  endsAt: inHours(50).toISOString(),
   ...overrides,
 });
 
@@ -94,8 +167,12 @@ module.exports = {
   clearDb,
   client,
   createUser,
+  createStudent,
   loggedInClient,
-  sampleEvent,
+  createClub,
+  createEvent,
+  eventBody,
   sampleStudent,
+  inHours,
   PASSWORD,
 };

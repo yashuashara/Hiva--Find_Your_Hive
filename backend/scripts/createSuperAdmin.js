@@ -16,6 +16,8 @@ const config = require("../config/env");
 const connectDB = require("../config/EventDB");
 const User = require("../models/User");
 const { hashPassword } = require("../utils/password");
+const { getDefaultUniversity } = require("../services/university");
+const { audit } = require("../services/audit");
 
 async function main() {
   const email = config.superAdminEmail;
@@ -27,22 +29,28 @@ async function main() {
   }
 
   await connectDB(config.mongoUri);
+  const university = await getDefaultUniversity();
   const existing = await User.findOne({ email });
 
   if (existing) {
+    const from = existing.role;
     existing.role = "super_admin";
     existing.status = "active";
+    if (!existing.university) existing.university = university._id;
     if (password) existing.passwordHash = await hashPassword(password);
     await existing.save();
+    await audit(null, "user.role_change", "User", existing._id, { from, to: "super_admin", via: "create-admin script" });
     console.log(`✅ ${email} is now super_admin${password ? " (password updated)" : ""}`);
   } else {
     if (!password) throw new Error("No account exists yet — set SUPER_ADMIN_PASSWORD to create it");
-    await User.create({
+    const user = await User.create({
       email,
       name: "Platform Admin",
       role: "super_admin",
+      university: university._id,
       passwordHash: await hashPassword(password),
     });
+    await audit(null, "user.create_super_admin", "User", user._id, { via: "create-admin script" });
     console.log(`✅ Created super_admin account for ${email}`);
   }
 }
