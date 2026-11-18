@@ -1,10 +1,25 @@
+// DEVELOPMENT SAMPLE DATA ONLY.
+// This script DELETES all events and registrations before inserting samples,
+// so it refuses to run unless you pass --reset, and never runs in production.
+//   npm run seed -- --reset
 const mongoose = require("mongoose");
+const config = require("./config/env");
 const Event = require("./models/Event");
 const Registration = require("./models/Registration");
 
+if (config.isProd) {
+  console.error("❌ Refusing to seed sample data in production.");
+  process.exit(1);
+}
+if (!process.argv.includes("--reset")) {
+  console.error("❌ This deletes ALL events and registrations. Re-run with --reset to confirm:");
+  console.error("   npm run seed -- --reset");
+  process.exit(1);
+}
+
 const seedData = async () => {
   try {
-    await mongoose.connect("mongodb://127.0.0.1:27017/campus_events");
+    await mongoose.connect(config.mongoUri);
     console.log("✅ Connected to MongoDB for seeding...");
 
     await Event.deleteMany({});

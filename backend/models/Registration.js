@@ -37,6 +37,12 @@ const registrationSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Who checked the attendee in and when (set by the server, never the client).
+  checkedInAt: Date,
+  checkedInBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
   paymentDetails: {
     method: {
       type: String,
@@ -54,6 +60,10 @@ const registrationSchema = new mongoose.Schema({
     }
   }
 }, { timestamps: true });
+
+// A student can hold only one registration per event. Enforced by the
+// database, so it holds even under concurrent requests.
+registrationSchema.index({ eventId: 1, studentId: 1 }, { unique: true });
 
 const Registration = mongoose.model("Registration", registrationSchema);
 

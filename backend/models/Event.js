@@ -26,9 +26,11 @@ const eventSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  // Managed by the server only: decremented atomically on registration.
   seatsAvailable: {
     type: Number,
-    required: true
+    required: true,
+    min: 0
   },
   entryFee: {
     type: Number,

@@ -1,13 +1,12 @@
 const mongoose = require("mongoose");
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect("mongodb://127.0.0.1:27017/campus_events");
-    console.log("✅ MongoDB Connected Successfully - campus_events");
-  } catch (error) {
-    console.error("❌ MongoDB Connection Failed:", error.message);
-    process.exit(1);
-  }
+// Connects to MongoDB using the URI from config (never hardcoded).
+// Throws on failure so the caller decides whether to exit.
+const connectDB = async (uri) => {
+  mongoose.set("strictQuery", true);
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
+  console.log(`✅ MongoDB connected (${mongoose.connection.name})`);
+  return mongoose.connection;
 };
 
 module.exports = connectDB;
