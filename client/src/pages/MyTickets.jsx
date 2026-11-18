@@ -7,7 +7,9 @@ import Loader from "../components/Loader";
 import EmptyState from "../components/EmptyState";
 import StatusBadge from "../components/StatusBadge";
 import { formatDateRange } from "../utils/format";
-import { HiOutlineCalendar, HiOutlineLocationMarker } from "react-icons/hi";
+import TicketQR from "../components/TicketQR";
+import { downloadTicketPdf } from "../utils/ticket";
+import { HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineQrcode, HiOutlineDownload } from "react-icons/hi";
 
 const CANCEL_REASON = {
   student: "You cancelled this registration",
@@ -20,6 +22,7 @@ const MyTickets = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [openTicket, setOpenTicket] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,11 +52,19 @@ const MyTickets = () => {
     }
   };
 
+  const downloadPdf = async (t) => {
+    try {
+      await downloadTicketPdf(t);
+    } catch {
+      toast.error("Couldn't create the PDF. Please try again.");
+    }
+  };
+
   const now = new Date();
 
   return (
     <div className="page-container">
-      <PageHeader title="My tickets" subtitle="Show your ticket at the entrance. QR codes are coming soon." />
+      <PageHeader title="My tickets" subtitle="Show the QR code at the entrance. Each ticket can be used once." />
 
       <div className="tabs" role="tablist" aria-label="Ticket timeframe">
         {[["upcoming", "Upcoming"], ["past", "Past & cancelled"]].map(([v, label]) => (
@@ -104,11 +115,51 @@ const MyTickets = () => {
                   )}
                   <span className="ticket-code-label">Ticket ID</span>
                   <code className="ticket-code">{t.ticketId}</code>
-                  {canCancel && <button type="button" className="btn btn-ghost btn-sm" onClick={() => cancel(t)}>Cancel</button>}
+                  {t.status === "confirmed" && (
+                    <div className="register-actions">
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => setOpenTicket(t)}>
+                        <HiOutlineQrcode aria-hidden="true" /> Show QR
+                      </button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => downloadPdf(t)}>
+                        <HiOutlineDownload aria-hidden="true" /> PDF
+                      </button>
+                    </div>
+                  )}
+                  {canCancel && <button type="button" className="btn btn-ghost btn-sm" onClick={() => cancel(t)}>Cancel registration</button>}
                 </div>
               </article>
             );
           })}
+        </div>
+      )}
+
+      {openTicket && (
+        <div className="modal-backdrop" onClick={() => setOpenTicket(null)}>
+          <div
+            className="modal-content modal-content--narrow ticket-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qr-title"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.key === "Escape" && setOpenTicket(null)}
+          >
+            <div className="modal-header">
+              <h3 id="qr-title">{openTicket.event?.title}</h3>
+              <button type="button" className="close-btn" aria-label="Close" autoFocus onClick={() => setOpenTicket(null)}>×</button>
+            </div>
+            <div className="ticket-modal-body">
+              <div className="qr-frame">
+                <TicketQR ticketId={openTicket.ticketId} size={260} />
+              </div>
+              <p className="cell-bold">{openTicket.studentName}</p>
+              <p className="muted">{formatDateRange(openTicket.event?.startsAt, openTicket.event?.endsAt)} · {openTicket.event?.venue}</p>
+              <code className="ticket-code">{openTicket.ticketId}</code>
+              <p className="form-hint">Turn your screen brightness up at the entrance. Each ticket works once, so don't share it.</p>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => downloadPdf(openTicket)}>
+                <HiOutlineDownload aria-hidden="true" /> Download PDF
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

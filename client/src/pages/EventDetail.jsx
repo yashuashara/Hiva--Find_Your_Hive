@@ -23,7 +23,7 @@ import ReasonDialog from "../components/ReasonDialog";
 import { formatDateRange, formatDate, formatTime, pct } from "../utils/format";
 import {
   HiArrowLeft, HiOutlineUsers, HiOutlineCheckCircle, HiOutlineTicket, HiCheck, HiX,
-  HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineDownload, HiOutlinePencil,
+  HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineDownload, HiOutlinePencil, HiOutlineQrcode,
 } from "react-icons/hi";
 
 // Which lifecycle buttons to show for each status.
@@ -73,6 +73,24 @@ const EventDetail = () => {
   useEffect(() => {
     if (!authLoading) fetchEventData();
   }, [authLoading, fetchEventData, user]);
+
+  // While the event is live, keep the attendee list fresh so check-ins made
+  // at the door show up here without reloading.
+  const canViewAttendees = viewer?.canViewAttendees;
+  const isPublished = event?.status === "published";
+  useEffect(() => {
+    if (!canViewAttendees || !isPublished) return undefined;
+    const t = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await getRegistrationsByEvent(id);
+        setRegistrations(res.data.data);
+      } catch {
+        /* keep current list */
+      }
+    }, 15000);
+    return () => clearInterval(t);
+  }, [canViewAttendees, isPublished, id]);
 
   const run = async (fn, successMsg) => {
     setBusy(true);
@@ -212,9 +230,14 @@ const EventDetail = () => {
         </div>
       )}
 
-      {/* Manager / reviewer toolbar */}
-      {(viewer?.canManage || viewer?.canReview) && (
+      {/* Manager / reviewer / check-in toolbar */}
+      {(viewer?.canManage || viewer?.canReview || viewer?.canCheckIn) && (
         <div className="action-bar" aria-label="Event actions">
+          {viewer.canCheckIn && event.status === "published" && (
+            <Link to={`/manage/events/${encodeURIComponent(event._id)}/scan`} className="btn btn-primary btn-sm">
+              <HiOutlineQrcode aria-hidden="true" /> Open scanner
+            </Link>
+          )}
           {viewer.canManage && ["draft", "rejected", "approved", "published"].includes(event.status) && (
             <Link to={`/manage/events/${encodeURIComponent(event._id)}/edit`} className="btn btn-ghost btn-sm">
               <HiOutlinePencil aria-hidden="true" /> Edit

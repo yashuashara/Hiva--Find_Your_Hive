@@ -1214,3 +1214,78 @@ a {
   .tabs { display: flex; width: 100%; }
   .tab { flex: 1; }
 }
+
+/* ==========================================================
+   Phase 5: QR tickets and door scanner
+   ========================================================== */
+.ticket-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  padding: 1.5rem;
+}
+/* QR codes must be dark-on-light with a quiet zone to scan reliably. */
+.qr-frame { background: #fff; padding: 0.75rem; border-radius: 12px; line-height: 0; }
+.ticket-qr { display: block; max-width: 100%; height: auto; image-rendering: pixelated; }
+.qr-placeholder { background: rgba(255, 255, 255, 0.08); border-radius: 8px; }
+
+.scanner-page { max-width: 560px; }
+.scanner-header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 1rem; }
+.scanner-header h1 { font-size: 1.6rem; font-weight: 800; }
+.scanner-count { font-size: 1rem; color: var(--text-muted); }
+.scanner-count strong { font-size: 1.6rem; color: var(--text-main); }
+.scanner-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border-glass);
+}
+.scanner-video { width: 100%; height: 100%; object-fit: cover; }
+.scanner-off {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+.scan-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: #fff;
+  animation: scanIn 0.15s ease-out;
+}
+.scan-result--ok { background: rgba(5, 150, 105, 0.94); }
+.scan-result--warn { background: rgba(217, 119, 6, 0.94); }
+.scan-result--error { background: rgba(220, 38, 38, 0.94); }
+.scan-result-icon { font-size: 4rem; }
+.scan-result-title { font-size: 1.5rem; font-weight: 800; }
+.scan-result-detail { font-size: 1rem; opacity: 0.95; }
+@keyframes scanIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.scanner-controls { display: flex; justify-content: center; margin: 0.75rem 0; }
+.manual-entry { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.manual-entry input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.85rem;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font: inherit;
+  font-family: ui-monospace, monospace;
+}

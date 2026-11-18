@@ -91,6 +91,7 @@ const ManageEvents = () => {
                   <th scope="col">When</th>
                   <th scope="col">Status</th>
                   <th scope="col">Seats left</th>
+                  <th scope="col"><span className="sr-only">Check-in</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -103,6 +104,11 @@ const ManageEvents = () => {
                     <td>{formatDateRange(ev.startsAt, ev.endsAt)}</td>
                     <td><StatusBadge status={ev.status} /></td>
                     <td>{ev.seatsAvailable} / {ev.capacity}</td>
+                    <td>
+                      {ev.status === "published" && (
+                        <Link className="btn btn-ghost btn-sm" to={`/manage/events/${encodeURIComponent(ev._id)}/scan`}>Scan</Link>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -61,6 +61,11 @@ export const setCheckIn = (ticketId, checkInStatus) =>
   API.put(`/campus/registrations/${enc(ticketId)}`, { checkInStatus });
 export const cancelRegistration = (ticketId) => API.delete(`/campus/registrations/${enc(ticketId)}`);
 
+// ==================== DOOR SCANNING ====================
+// `code` is the raw QR text (or a typed ticket ID); the server verifies it.
+export const scanTicket = (eventId, code) => API.post(`/campus/events/${enc(eventId)}/check-in`, { code });
+export const getAttendance = (eventId) => API.get(`/campus/events/${enc(eventId)}/attendance`);
+
 // ==================== MY TICKETS ====================
 export const myRegistrations = (when = "all") => API.get("/me/registrations", { params: { when } });
 export const cancelMyRegistration = (ticketId) => API.post(`/me/registrations/${enc(ticketId)}/cancel`, {});

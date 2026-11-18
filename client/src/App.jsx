@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -14,11 +15,14 @@ import Clubs from "./pages/Clubs";
 import ClubDetail from "./pages/ClubDetail";
 import ClubRequest from "./pages/ClubRequest";
 import Profile from "./pages/Profile";
-import MyTickets from "./pages/MyTickets";
 import Approvals from "./pages/Approvals";
 import AdminUsers from "./pages/AdminUsers";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+
+// Pages with heavy libraries (camera scanner, QR) load only when opened.
+const Scanner = lazy(() => import("./pages/Scanner"));
+const MyTickets = lazy(() => import("./pages/MyTickets"));
 
 // Admins land on the dashboard; everyone else on event discovery.
 function Home() {
@@ -39,6 +43,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <Suspense fallback={<Loader />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -64,6 +69,7 @@ function App() {
               <Route path="manage/events" element={<ManageEvents />} />
               <Route path="manage/events/new" element={<EventForm />} />
               <Route path="manage/events/:id/edit" element={<EventForm />} />
+              <Route path="manage/events/:id/scan" element={<Scanner />} />
             </Route>
 
             {/* Platform admins */}
@@ -77,6 +83,7 @@ function App() {
             <Route path="*" element={<Navigate to="/events" replace />} />
           </Route>
         </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );
