@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { getAllRegistrations, getAllEvents, createRegistration, setCheckIn, deleteRegistration, errorMessage } from "../services/api";
+import { getAllRegistrations, listManageableEvents, createRegistration, setCheckIn, cancelRegistration, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
 import Loader from "../components/Loader";
 import EmptyState from "../components/EmptyState";
+import StatusBadge from "../components/StatusBadge";
 import { HiPlus, HiSearch, HiCheck, HiX, HiTrash } from "react-icons/hi";
 
 const DEPARTMENTS = [
@@ -40,7 +41,7 @@ const Registrations = () => {
   const fetchData = async () => {
     try {
       setLoadError("");
-      const [regsRes, eventsRes] = await Promise.all([getAllRegistrations(), getAllEvents()]);
+      const [regsRes, eventsRes] = await Promise.all([getAllRegistrations(), listManageableEvents({ limit: 100 })]);
       setRegistrations(regsRes.data.data);
       setEvents(eventsRes.data.data);
     } catch (err) {
@@ -54,8 +55,11 @@ const Registrations = () => {
     fetchData();
   }, []);
 
+  // Walk-ins can only be added to published events.
+  const openEvents = events.filter((ev) => ev.status === "published");
+
   const openModal = () => {
-    setFormData(emptyForm(events[0]?._id || ""));
+    setFormData(emptyForm(openEvents[0]?._id || ""));
     setShowModal(true);
   };
 
@@ -69,12 +73,12 @@ const Registrations = () => {
     }
   };
 
-  const handleDelete = async (reg) => {
-    if (!window.confirm(`Delete the registration for ${reg.studentName}? This frees up their seat.`)) return;
+  const handleCancel = async (reg) => {
+    if (!window.confirm(`Cancel the registration for ${reg.studentName}? Their ticket stops working and the seat is freed.`)) return;
     try {
-      await deleteRegistration(reg.ticketId);
-      setRegistrations((prev) => prev.filter((r) => r.ticketId !== reg.ticketId));
-      toast.success("Registration deleted");
+      const res = await cancelRegistration(reg.ticketId);
+      setRegistrations((prev) => prev.map((r) => (r.ticketId === reg.ticketId ? res.data.data : r)));
+      toast.success("Registration cancelled");
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -148,7 +152,7 @@ const Registrations = () => {
         title="Student Registrations"
         subtitle={`Managing ${registrations.length} registrations across all events`}
         action={
-          <button type="button" className="btn btn-primary" onClick={openModal} disabled={events.length === 0}>
+          <button type="button" className="btn btn-primary" onClick={openModal} disabled={openEvents.length === 0}>
             <HiPlus aria-hidden="true" /> New Registration
           </button>
         }
@@ -227,6 +231,7 @@ const Registrations = () => {
                     <button
                       type="button"
                       className={`badge badge-clickable ${reg.checkInStatus ? "badge--success" : "badge--warning"}`}
+                      disabled={reg.status === "cancelled"}
                       onClick={() => handleToggleCheckIn(reg)}
                       aria-label={reg.checkInStatus ? `Undo check-in for ${reg.studentName}` : `Check in ${reg.studentName}`}
                     >
@@ -240,14 +245,21 @@ const Registrations = () => {
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn-icon btn-icon-danger"
-                      onClick={() => handleDelete(reg)}
-                      aria-label={`Delete registration for ${reg.studentName}`}
-                    >
-                      <HiTrash aria-hidden="true" />
-                    </button>
+                    {reg.status === "cancelled" ? (
+                      <StatusBadge status="cancelled" />
+                    ) : (
+                      !reg.checkInStatus && (
+                        <button
+                          type="button"
+                          className="btn-icon btn-icon-danger"
+                          onClick={() => handleCancel(reg)}
+                          aria-label={`Cancel registration for ${reg.studentName}`}
+                          title="Cancel registration"
+                        >
+                          <HiTrash aria-hidden="true" />
+                        </button>
+                      )
+                    )}
                   </td>
                 </tr>
               ))}
@@ -276,7 +288,7 @@ const Registrations = () => {
                 <div className="form-group">
                   <label htmlFor="reg-event">Event</label>
                   <select id="reg-event" value={formData.eventId} onChange={set("eventId")}>
-                    {events.map((ev) => (
+                    {openEvents.map((ev) => (
                       <option key={ev._id} value={ev._id} disabled={ev.seatsAvailable <= 0}>
                         {ev.title} ({ev.entryFee ? `₹${ev.entryFee}` : "Free"}{ev.seatsAvailable <= 0 ? ", full" : ""})
                       </option>

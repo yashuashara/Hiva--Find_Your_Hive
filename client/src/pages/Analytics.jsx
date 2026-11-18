@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllEvents, getAllRegistrations, errorMessage } from "../services/api";
+import { listManageableEvents, getAllRegistrations, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
 import Loader from "../components/Loader";
 import StatCard from "../components/StatCard";
@@ -17,9 +17,10 @@ const Analytics = () => {
   const fetchData = async () => {
     try {
       setLoadError("");
-      const [eventsRes, regsRes] = await Promise.all([getAllEvents(), getAllRegistrations()]);
+      const [eventsRes, regsRes] = await Promise.all([listManageableEvents({ limit: 100 }), getAllRegistrations()]);
       setEvents(eventsRes.data.data);
-      setRegistrations(regsRes.data.data);
+      // Cancelled registrations are kept for history but excluded from stats.
+      setRegistrations(regsRes.data.data.filter((r) => r.status !== "cancelled"));
     } catch (err) {
       setLoadError(errorMessage(err));
     } finally {

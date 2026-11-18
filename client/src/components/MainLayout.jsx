@@ -8,6 +8,12 @@ import {
   HiOutlineChartBar,
   HiOutlineLogout,
   HiOutlineLogin,
+  HiOutlineUserGroup,
+  HiOutlineClipboardList,
+  HiOutlineBadgeCheck,
+  HiOutlineCollection,
+  HiOutlineUsers,
+  HiOutlineUserCircle,
   HiMenu,
   HiX,
 } from "react-icons/hi";
@@ -19,7 +25,7 @@ const ROLE_LABELS = { student: "Student", uni_admin: "University Admin", super_a
 const navClass = ({ isActive }) => (isActive ? "nav-link active" : "nav-link");
 
 const MainLayout = () => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, canManageEvents, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
@@ -57,21 +63,44 @@ const MainLayout = () => {
           <span>Event Engine</span>
         </Link>
         <nav className="sidebar-nav" aria-label="Main">
-          {isAdmin && (
-            <NavLink to="/" end className={navClass} onClick={closeMenu}>
-              <HiOutlineHome aria-hidden="true" /> <span>Dashboard</span>
-            </NavLink>
-          )}
           <NavLink to="/events" className={navClass} onClick={closeMenu}>
             <HiOutlineCalendar aria-hidden="true" /> <span>Events</span>
           </NavLink>
+          <NavLink to="/clubs" end className={navClass} onClick={closeMenu}>
+            <HiOutlineUserGroup aria-hidden="true" /> <span>Clubs</span>
+          </NavLink>
+          {user && (
+            <NavLink to="/tickets" className={navClass} onClick={closeMenu}>
+              <HiOutlineTicket aria-hidden="true" /> <span>My tickets</span>
+            </NavLink>
+          )}
+
+          {canManageEvents && (
+            <>
+              <span className="nav-section">Organize</span>
+              <NavLink to="/manage/events" className={navClass} onClick={closeMenu}>
+                <HiOutlineClipboardList aria-hidden="true" /> <span>Manage events</span>
+              </NavLink>
+            </>
+          )}
+
           {isAdmin && (
             <>
+              <span className="nav-section">Admin</span>
+              <NavLink to="/" end className={navClass} onClick={closeMenu}>
+                <HiOutlineHome aria-hidden="true" /> <span>Dashboard</span>
+              </NavLink>
+              <NavLink to="/admin/approvals" className={navClass} onClick={closeMenu}>
+                <HiOutlineBadgeCheck aria-hidden="true" /> <span>Approvals</span>
+              </NavLink>
               <NavLink to="/registrations" className={navClass} onClick={closeMenu}>
-                <HiOutlineTicket aria-hidden="true" /> <span>Registrations</span>
+                <HiOutlineCollection aria-hidden="true" /> <span>Registrations</span>
               </NavLink>
               <NavLink to="/analytics" className={navClass} onClick={closeMenu}>
                 <HiOutlineChartBar aria-hidden="true" /> <span>Analytics</span>
+              </NavLink>
+              <NavLink to="/admin/users" className={navClass} onClick={closeMenu}>
+                <HiOutlineUsers aria-hidden="true" /> <span>Users</span>
               </NavLink>
             </>
           )}
@@ -80,10 +109,13 @@ const MainLayout = () => {
         <div className="sidebar-user">
           {user ? (
             <>
-              <div className="sidebar-user-info">
-                <span className="sidebar-user-name">{user.name}</span>
-                <span className="sidebar-user-role">{ROLE_LABELS[user.role] || user.role}</span>
-              </div>
+              <NavLink to="/profile" className={navClass} onClick={closeMenu}>
+                <HiOutlineUserCircle aria-hidden="true" />
+                <span className="sidebar-user-info">
+                  <span className="sidebar-user-name">{user.name}</span>
+                  <span className="sidebar-user-role">{ROLE_LABELS[user.role] || user.role}</span>
+                </span>
+              </NavLink>
               <button type="button" className="nav-link nav-button" onClick={handleLogout}>
                 <HiOutlineLogout aria-hidden="true" /> <span>Sign out</span>
               </button>

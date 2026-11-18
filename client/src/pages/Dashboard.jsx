@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getAllEvents, getAllRegistrations, errorMessage } from "../services/api";
+import { listManageableEvents, getAllRegistrations, errorMessage } from "../services/api";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 import Loader from "../components/Loader";
@@ -16,9 +16,10 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setLoadError("");
-      const [eventsRes, regsRes] = await Promise.all([getAllEvents(), getAllRegistrations()]);
+      const [eventsRes, regsRes] = await Promise.all([listManageableEvents({ limit: 100 }), getAllRegistrations()]);
       setEvents(eventsRes.data.data);
-      setRegistrations(regsRes.data.data);
+      // Cancelled registrations are kept for history but excluded from stats.
+      setRegistrations(regsRes.data.data.filter((r) => r.status !== "cancelled"));
     } catch (err) {
       setLoadError(errorMessage(err));
     } finally {

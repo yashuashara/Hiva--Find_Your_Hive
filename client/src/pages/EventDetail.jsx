@@ -1,33 +1,64 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { getEventById, getRegistrationsByEvent, setCheckIn, deleteRegistration, errorMessage } from "../services/api";
+import {
+  getEventById,
+  getRegistrationsByEvent,
+  setCheckIn,
+  cancelRegistration,
+  transitionEvent,
+  deleteEvent,
+  registerForEvent,
+  cancelMyRegistration,
+  exportAttendeesUrl,
+  errorMessage,
+  errorCode,
+} from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import PageHeader from "../components/PageHeader";
 import Loader from "../components/Loader";
 import StatCard from "../components/StatCard";
 import EmptyState from "../components/EmptyState";
-import { HiArrowLeft, HiOutlineUsers, HiOutlineCheckCircle, HiOutlineCurrencyRupee, HiOutlineTicket, HiCheck, HiX, HiTrash } from "react-icons/hi";
+import StatusBadge from "../components/StatusBadge";
+import ReasonDialog from "../components/ReasonDialog";
+import { formatDateRange, formatDate, formatTime, pct } from "../utils/format";
+import {
+  HiArrowLeft, HiOutlineUsers, HiOutlineCheckCircle, HiOutlineTicket, HiCheck, HiX,
+  HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineDownload, HiOutlinePencil,
+} from "react-icons/hi";
 
-const pct = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
+// Which lifecycle buttons to show for each status.
+const MANAGER_ACTIONS = {
+  draft: [["submit", "Submit for approval", "btn-primary"]],
+  rejected: [["submit", "Resubmit for approval", "btn-primary"]],
+  pending_approval: [["withdraw", "Withdraw", "btn-ghost"]],
+  approved: [["publish", "Publish", "btn-primary"]],
+  published: [["complete", "Mark completed", "btn-secondary"]],
+};
+const CANCELLABLE = ["draft", "pending_approval", "approved", "published"];
 
 const EventDetail = () => {
   const { id } = useParams();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading: authLoading, profileComplete } = useAuth();
   const [event, setEvent] = useState(null);
+  const [viewer, setViewer] = useState(null);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [dialog, setDialog] = useState(null); // "reject" | "cancel"
 
   const fetchEventData = useCallback(async () => {
     try {
       setLoadError("");
       setNotFound(false);
-      const evtRes = await getEventById(id);
-      setEvent(evtRes.data.data);
-      // Attendee lists contain student data and are only loaded for admins.
-      if (isAdmin) {
+      const res = await getEventById(id);
+      setEvent(res.data.data);
+      setViewer(res.data.viewer);
+      // Attendee lists are only loaded for people allowed to see them.
+      if (res.data.viewer.canViewAttendees) {
         const regsRes = await getRegistrationsByEvent(id);
         setRegistrations(regsRes.data.data);
       }
@@ -37,11 +68,63 @@ const EventDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, isAdmin]);
+  }, [id]);
 
   useEffect(() => {
     if (!authLoading) fetchEventData();
-  }, [authLoading, fetchEventData]);
+  }, [authLoading, fetchEventData, user]);
+
+  const run = async (fn, successMsg) => {
+    setBusy(true);
+    try {
+      await fn();
+      if (successMsg) toast.success(successMsg);
+      await fetchEventData();
+      return true;
+    } catch (err) {
+      toast.error(errorMessage(err));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!user) return navigate("/login", { state: { from: location.pathname } });
+    setBusy(true);
+    try {
+      await registerForEvent(id);
+      toast.success("You're registered! Your ticket is in My Tickets.");
+      await fetchEventData();
+    } catch (err) {
+      if (errorCode(err) === "PROFILE_INCOMPLETE") {
+        toast.error("Add your PRN, department and year to your profile first.");
+        navigate("/profile", { state: { from: location.pathname } });
+      } else {
+        toast.error(errorMessage(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCancelMine = () => {
+    if (!window.confirm("Cancel your registration? Your seat will be released.")) return;
+    run(() => cancelMyRegistration(viewer.registration.ticketId), "Registration cancelled");
+  };
+
+  const handleTransition = (action, reason) => run(() => transitionEvent(id, action, reason), "Event updated");
+
+  const handleDelete = async () => {
+    if (!window.confirm("Delete this event permanently?")) return;
+    try {
+      await deleteEvent(id);
+      toast.success("Event deleted");
+      navigate("/manage/events");
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
 
   const handleToggleCheckIn = async (reg) => {
     try {
@@ -53,13 +136,13 @@ const EventDetail = () => {
     }
   };
 
-  const handleDeleteReg = async (reg) => {
-    if (!window.confirm(`Delete the registration for ${reg.studentName}? This frees up their seat.`)) return;
+  const handleCancelReg = async (reg) => {
+    if (!window.confirm(`Cancel the registration for ${reg.studentName}? Their ticket will stop working.`)) return;
     try {
-      await deleteRegistration(reg.ticketId);
+      await cancelRegistration(reg.ticketId);
       setRegistrations((prev) => prev.filter((r) => r.ticketId !== reg.ticketId));
       setEvent((prev) => ({ ...prev, seatsAvailable: Math.min(prev.capacity, prev.seatsAvailable + 1) }));
-      toast.success("Registration deleted");
+      toast.success("Registration cancelled");
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -69,7 +152,7 @@ const EventDetail = () => {
 
   const backLink = (
     <Link to="/events" className="back-link">
-      <HiArrowLeft aria-hidden="true" /> Back to Events
+      <HiArrowLeft aria-hidden="true" /> All events
     </Link>
   );
 
@@ -86,119 +169,222 @@ const EventDetail = () => {
     );
   }
 
+  const now = new Date();
+  const closesAt = event.registrationClosesAt || event.startsAt;
+  const registrationState = (() => {
+    if (event.status !== "published") return { open: false, label: "Registration is not open" };
+    if (event.registrationOpensAt && now < new Date(event.registrationOpensAt)) {
+      return { open: false, label: `Registration opens ${formatDate(event.registrationOpensAt)}, ${formatTime(event.registrationOpensAt)}` };
+    }
+    if (closesAt && now >= new Date(closesAt)) return { open: false, label: "Registration has closed" };
+    if (event.seatsAvailable <= 0) return { open: false, label: "Fully booked" };
+    if (event.entryFee > 0) return { open: false, label: "Contact the organizers to register for this paid event" };
+    return { open: true };
+  })();
+
   const checkedInCount = registrations.filter((r) => r.checkInStatus).length;
-  // Only verified (Completed) payments count as revenue.
-  const collected = registrations
-    .filter((r) => r.paymentDetails?.status === "Completed")
-    .reduce((sum, r) => sum + (r.paymentDetails?.amountPaid || 0), 0);
+  const myReg = viewer?.registration;
 
   return (
     <div className="page-container">
       {backLink}
 
-      <PageHeader title={event.title} subtitle={`Organized by ${event.organizerClub} • Venue: ${event.venue}`} />
+      <header className="event-hero">
+        <div className="event-hero-badges">
+          <span className={`badge badge--${event.category.toLowerCase()}`}>{event.category}</span>
+          {(viewer?.canManage || viewer?.canReview) && <StatusBadge status={event.status} />}
+          {event.status === "cancelled" && !viewer?.canManage && <StatusBadge status="cancelled" />}
+        </div>
+        <h1>{event.title}</h1>
+        <p className="header-subtitle">
+          Organized by{" "}
+          {event.club?.slug ? <Link className="text-link" to={`/clubs/${event.club.slug}`}>{event.organizerClub}</Link> : event.organizerClub}
+        </p>
+        <div className="event-hero-meta">
+          <span><HiOutlineCalendar aria-hidden="true" /> {formatDateRange(event.startsAt, event.endsAt)}</span>
+          <span><HiOutlineLocationMarker aria-hidden="true" /> {event.venue}</span>
+        </div>
+      </header>
 
-      {isAdmin && (
+      {event.statusReason && (viewer?.canManage || viewer?.canReview) && ["rejected", "cancelled"].includes(event.status) && (
+        <div className="notice notice--danger" role="status">
+          <strong>{event.status === "rejected" ? "Rejected" : "Cancelled"}:</strong> {event.statusReason}
+        </div>
+      )}
+
+      {/* Manager / reviewer toolbar */}
+      {(viewer?.canManage || viewer?.canReview) && (
+        <div className="action-bar" aria-label="Event actions">
+          {viewer.canManage && ["draft", "rejected", "approved", "published"].includes(event.status) && (
+            <Link to={`/manage/events/${encodeURIComponent(event._id)}/edit`} className="btn btn-ghost btn-sm">
+              <HiOutlinePencil aria-hidden="true" /> Edit
+            </Link>
+          )}
+          {viewer.canManage && (MANAGER_ACTIONS[event.status] || []).map(([action, label, cls]) => (
+            <button key={action} type="button" className={`btn ${cls} btn-sm`} disabled={busy} onClick={() => handleTransition(action)}>
+              {label}
+            </button>
+          ))}
+          {viewer.canReview && event.status === "pending_approval" && (
+            <>
+              <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => handleTransition("approve")}>Approve</button>
+              <button type="button" className="btn btn-danger-outline btn-sm" disabled={busy} onClick={() => setDialog("reject")}>Reject</button>
+            </>
+          )}
+          {viewer.canManage && CANCELLABLE.includes(event.status) && (
+            <button type="button" className="btn btn-danger-outline btn-sm" disabled={busy} onClick={() => setDialog("cancel")}>Cancel event</button>
+          )}
+          {viewer.canManage && ["draft", "rejected"].includes(event.status) && (
+            <button type="button" className="btn btn-danger-outline btn-sm" disabled={busy} onClick={handleDelete}>Delete</button>
+          )}
+        </div>
+      )}
+
+      {viewer?.canViewAttendees && (
         <div className="stats-grid">
-          <StatCard icon={<HiOutlineUsers />} label="Total Registered" value={registrations.length} color="blue" />
-          <StatCard
-            icon={<HiOutlineCheckCircle />}
-            label="Checked In"
-            value={`${checkedInCount} (${pct(checkedInCount, registrations.length)}%)`}
-            color="green"
-          />
-          <StatCard icon={<HiOutlineTicket />} label="Available Seats" value={event.seatsAvailable} color="purple" />
-          <StatCard icon={<HiOutlineCurrencyRupee />} label="Verified Revenue" value={`₹${collected.toLocaleString()}`} color="orange" />
+          <StatCard icon={<HiOutlineUsers />} label="Registered" value={registrations.length} color="blue" />
+          <StatCard icon={<HiOutlineCheckCircle />} label="Checked in" value={`${checkedInCount} (${pct(checkedInCount, registrations.length)}%)`} color="green" />
+          <StatCard icon={<HiOutlineTicket />} label="Seats left" value={`${event.seatsAvailable} / ${event.capacity}`} color="purple" />
         </div>
       )}
 
       <div className="event-detail-grid">
         <div className="detail-card">
-          <h3>Event Overview</h3>
+          <h3>About this event</h3>
+          {event.description ? <p className="event-description">{event.description}</p> : <p className="muted">No description yet.</p>}
           <div className="info-row">
-            <span className="info-label">Event ID:</span>
-            <span className="badge badge--id">{event._id}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">Category:</span>
-            <span className={`badge badge--${event.category.toLowerCase()}`}>{event.category}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">Entry Fee:</span>
+            <span className="info-label">Entry:</span>
             <span>{event.entryFee === 0 ? "Free" : `₹${event.entryFee}`}</span>
           </div>
-          <div className="info-row">
-            <span className="info-label">Seats:</span>
-            <span>{event.seatsAvailable > 0 ? `${event.seatsAvailable} of ${event.capacity} available` : "Fully booked"}</span>
-          </div>
+          {event.status !== "completed" && (
+            <div className="info-row">
+              <span className="info-label">Seats:</span>
+              <span>{event.seatsAvailable > 0 ? `${event.seatsAvailable} of ${event.capacity} available` : "Fully booked"}</span>
+            </div>
+          )}
+          {closesAt && event.status === "published" && (
+            <div className="info-row">
+              <span className="info-label">Registration closes:</span>
+              <span>{formatDate(closesAt)}, {formatTime(closesAt)}</span>
+            </div>
+          )}
           {event.coordinators?.length > 0 && (
             <div className="info-row">
-              <span className="info-label">Coordinators:</span>
+              <span className="info-label">Contact:</span>
               <span>{event.coordinators.map((c) => `${c.name} (${c.contact})`).join(", ")}</span>
             </div>
           )}
-          {event.sponsors?.length > 0 && (
-            <div className="info-row">
-              <span className="info-label">Sponsors:</span>
-              <div className="chip-group">
-                {event.sponsors.map((s) => <span key={s} className="chip">{s}</span>)}
-              </div>
+          {event.tags?.length > 0 && (
+            <div className="tags-container">
+              {event.tags.map((t) => <span key={t} className="tag-chip">#{t}</span>)}
             </div>
           )}
         </div>
 
-        {isAdmin && (
-          <div className="detail-card">
-            <h3>Registrations ({registrations.length})</h3>
-            {registrations.length === 0 ? (
-              <EmptyState title="No registrations yet" message="Registrations for this event will appear here." />
-            ) : (
-              <div className="table-wrapper scrollable-table">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Ticket ID</th>
-                      <th scope="col">Student Name</th>
-                      <th scope="col">Dept / Year</th>
-                      <th scope="col">Check-In</th>
-                      <th scope="col"><span className="sr-only">Actions</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrations.map((reg) => (
-                      <tr key={reg.ticketId}>
-                        <td><span className="badge badge--id">{reg.ticketId}</span></td>
-                        <td className="cell-bold">{reg.studentName}</td>
-                        <td>{reg.department} (Y{reg.year})</td>
-                        <td>
-                          <button
-                            type="button"
-                            className={`badge badge-clickable ${reg.checkInStatus ? "badge--success" : "badge--warning"}`}
-                            onClick={() => handleToggleCheckIn(reg)}
-                            aria-label={reg.checkInStatus ? `Undo check-in for ${reg.studentName}` : `Check in ${reg.studentName}`}
-                          >
-                            {reg.checkInStatus ? <HiCheck aria-hidden="true" /> : <HiX aria-hidden="true" />} {reg.checkInStatus ? "Checked In" : "Pending"}
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="btn-icon btn-icon-danger"
-                            onClick={() => handleDeleteReg(reg)}
-                            aria-label={`Delete registration for ${reg.studentName}`}
-                          >
-                            <HiTrash aria-hidden="true" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        {/* Registration panel */}
+        <aside className="detail-card register-card" aria-label="Registration">
+          <h3>Your ticket</h3>
+          {myReg ? (
+            <>
+              <p className="register-ok"><HiCheck aria-hidden="true" /> You're registered.</p>
+              <p className="muted">Ticket <code>{myReg.ticketId}</code></p>
+              {myReg.checkInStatus ? (
+                <p className="muted">Checked in. Enjoy the event!</p>
+              ) : (
+                <div className="register-actions">
+                  <Link to="/tickets" className="btn btn-secondary btn-sm">View in My Tickets</Link>
+                  {(!event.startsAt || now < new Date(event.startsAt)) && (
+                    <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={handleCancelMine}>Cancel registration</button>
+                  )}
+                </div>
+              )}
+            </>
+          ) : registrationState.open ? (
+            <>
+              {user && !profileComplete && (
+                <p className="muted">You'll need your PRN, department and year on your <Link className="text-link" to="/profile">profile</Link>.</p>
+              )}
+              <button type="button" className="btn btn-primary btn-block" disabled={busy} onClick={handleRegister}>
+                {user ? (busy ? "Registering..." : "Register for free") : "Sign in to register"}
+              </button>
+            </>
+          ) : (
+            <p className="muted">{registrationState.label}</p>
+          )}
+        </aside>
+      </div>
+
+      {viewer?.canViewAttendees && (
+        <section className="detail-card attendees-card">
+          <div className="section-header">
+            <h3>Attendees ({registrations.length})</h3>
+            {registrations.length > 0 && (
+              <a className="btn btn-ghost btn-sm" href={exportAttendeesUrl(event._id)}>
+                <HiOutlineDownload aria-hidden="true" /> Export CSV
+              </a>
             )}
           </div>
-        )}
-      </div>
+          {registrations.length === 0 ? (
+            <EmptyState title="No registrations yet" message="Attendees will appear here as students register." />
+          ) : (
+            <div className="table-wrapper scrollable-table">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">PRN / ID</th>
+                    <th scope="col">Dept / Year</th>
+                    <th scope="col">Ticket</th>
+                    <th scope="col">Check-in</th>
+                    {viewer.canManage && <th scope="col"><span className="sr-only">Actions</span></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {registrations.map((reg) => (
+                    <tr key={reg.ticketId}>
+                      <td className="cell-bold">{reg.studentName}</td>
+                      <td><code>{reg.studentId}</code></td>
+                      <td>{reg.department} (Y{reg.year})</td>
+                      <td><span className="badge badge--id ticket-id" title={reg.ticketId}>{reg.ticketId.slice(0, 12)}…</span></td>
+                      <td>
+                        <button
+                          type="button"
+                          className={`badge badge-clickable ${reg.checkInStatus ? "badge--success" : "badge--warning"}`}
+                          onClick={() => handleToggleCheckIn(reg)}
+                          disabled={event.status !== "published" || (reg.checkInStatus && !viewer.canManage)}
+                          aria-label={reg.checkInStatus ? `Undo check-in for ${reg.studentName}` : `Check in ${reg.studentName}`}
+                        >
+                          {reg.checkInStatus ? <HiCheck aria-hidden="true" /> : <HiX aria-hidden="true" />} {reg.checkInStatus ? "Checked in" : "Not yet"}
+                        </button>
+                      </td>
+                      {viewer.canManage && (
+                        <td>
+                          {!reg.checkInStatus && (
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleCancelReg(reg)}>Cancel</button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {dialog && (
+        <ReasonDialog
+          title={dialog === "reject" ? "Reject this event" : "Cancel this event"}
+          description={dialog === "cancel" ? "All tickets for this event will be cancelled. This cannot be undone." : "The organizers can fix the event and resubmit it."}
+          confirmLabel={dialog === "reject" ? "Reject event" : "Cancel event"}
+          onClose={() => setDialog(null)}
+          onConfirm={async (reason) => {
+            const ok = await handleTransition(dialog, reason);
+            if (ok) setDialog(null);
+          }}
+        />
+      )}
     </div>
   );
 };
