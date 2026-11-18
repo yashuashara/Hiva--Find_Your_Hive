@@ -109,7 +109,8 @@ async function summarizeEvents(events) {
       checkedIn,
       // Attendance is measured only over events that have already ended,
       // so upcoming events do not drag the percentage down.
-      attendanceRate: rate(pastCheckedIn, pastRegistered),
+      // null (not 0%) when no event has ended yet: there is nothing to measure.
+      attendanceRate: pastRegistered ? rate(pastCheckedIn, pastRegistered) : null,
       capacityUtilization: rate(liveRegistered, liveCapacity),
     },
     statusCounts,
@@ -141,7 +142,6 @@ async function adminOverview(user) {
 
   return {
     ...summary,
-    events: summary.events.slice(0, 10),
     topEvents: [...summary.events].sort((a, b) => b.registered - a.registered).slice(0, 5),
     byCategory,
     clubs,
