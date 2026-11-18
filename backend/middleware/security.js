@@ -6,9 +6,9 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
 // perUser: count signed-in users individually instead of per IP address.
 // Many students share one campus Wi-Fi IP, so a pure per-IP limit would
 // block a whole team of volunteers scanning tickets at a busy entrance.
-const limiter = (limit, message, { perUser = false } = {}) =>
+const limiter = (limit, message, { perUser = false, windowMs = FIFTEEN_MIN } = {}) =>
   rateLimit({
-    windowMs: FIFTEEN_MIN,
+    windowMs,
     limit,
     standardHeaders: "draft-8",
     legacyHeaders: false,

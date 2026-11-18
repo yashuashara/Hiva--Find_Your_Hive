@@ -12,6 +12,7 @@ const Event = require("../models/Event");
 require("../models/Registration");
 require("../models/University");
 require("../models/AuditLog");
+require("../models/ClubFollow");
 const { hashPassword } = require("../utils/password");
 const { getDefaultUniversity } = require("../services/university");
 

@@ -1,5 +1,6 @@
 const Club = require("../models/Club");
 const ClubMembership = require("../models/ClubMembership");
+const ClubFollow = require("../models/ClubFollow");
 const User = require("../models/User");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
@@ -95,12 +96,18 @@ const getClub = asyncHandler(async (req, res) => {
     .populate("user", "name")
     .lean();
 
+  const [followers, following] = await Promise.all([
+    ClubFollow.countDocuments({ club: club._id }),
+    req.user ? ClubFollow.exists({ club: club._id, user: req.user._id }) : null,
+  ]);
+
   res.json({
     success: true,
-    data: { ...club, team: team.filter((m) => m.user).map((m) => ({ name: m.user.name, role: m.role })) },
+    data: { ...club, followers, team: team.filter((m) => m.user).map((m) => ({ name: m.user.name, role: m.role })) },
     viewer: {
       role,
       membership,
+      following: !!following,
       canManageClub: can(role, "manageClub"),
       canManageEvents: can(role, "manageEvents"),
       canReview: can(role, "review"),
@@ -284,7 +291,22 @@ const removeMember = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Member removed" });
 });
 
+// POST /clubs/:id/follow and DELETE /clubs/:id/follow — idempotent.
+const followClub = asyncHandler(async (req, res) => {
+  const club = await Club.findOne({ _id: req.params.id, status: "approved" }).select("_id").lean();
+  if (!club) throw new AppError(404, "Club not found");
+  await ClubFollow.updateOne({ user: req.user._id, club: club._id }, { $setOnInsert: { user: req.user._id, club: club._id } }, { upsert: true });
+  res.json({ success: true, data: { following: true, followers: await ClubFollow.countDocuments({ club: club._id }) } });
+});
+
+const unfollowClub = asyncHandler(async (req, res) => {
+  await ClubFollow.deleteOne({ user: req.user._id, club: req.params.id });
+  res.json({ success: true, data: { following: false, followers: await ClubFollow.countDocuments({ club: req.params.id }) } });
+});
+
 module.exports = {
+  followClub,
+  unfollowClub,
   listClubs,
   myClubs,
   getClub,

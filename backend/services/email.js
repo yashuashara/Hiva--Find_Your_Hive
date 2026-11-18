@@ -30,7 +30,7 @@ const escapeHtml = (s) =>
 
 const fmtDate = (d) =>
   d
-    ? new Intl.DateTimeFormat("en-IN", { dateStyle: "full", timeStyle: "short", timeZone: config.email.timeZone }).format(new Date(d))
+    ? new Intl.DateTimeFormat("en-IN", { dateStyle: "full", timeStyle: "short", timeZone: config.timeZone }).format(new Date(d))
     : "Date to be announced";
 
 function layout(title, bodyHtml) {

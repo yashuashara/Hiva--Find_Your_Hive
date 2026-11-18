@@ -18,6 +18,10 @@ router.post("/:id/members", requireAuth, validate({ params: s.clubIdParam, body:
 router.post("/:id/members/:memberId/approve", requireAuth, validate({ params: s.memberParam }), clubs.approveMember);
 router.delete("/:id/members/:memberId", requireAuth, validate({ params: s.memberParam }), clubs.removeMember);
 
+// Following (signed-in users)
+router.post("/:id/follow", requireAuth, validate({ params: s.clubIdParam }), clubs.followClub);
+router.delete("/:id/follow", requireAuth, validate({ params: s.clubIdParam }), clubs.unfollowClub);
+
 // Admin review: approve | reject | suspend | reinstate
 router.post("/:id/:action", requireAuth, validate({ params: s.reviewParam, body: s.reasonBody }), clubs.reviewClub);
 

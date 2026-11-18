@@ -36,6 +36,26 @@ function createApp({ sessionStore, authRateLimit, apiRateLimit } = {}) {
   if (!config.isTest) app.use(requestLogger);
   app.use(express.json({ limit: "100kb" }));
 
+  // Uploaded banners/logos. Public by design. Only image files ever land in
+  // this folder (checked by content when uploaded), and they are served with
+  // nosniff so a browser never treats one as HTML/script. Cross-origin
+  // loading is allowed so the frontend on another domain can show them.
+  app.use(
+    "/uploads",
+    express.static(config.uploadDir, {
+      index: false,
+      dotfiles: "deny",
+      fallthrough: false,
+      immutable: true,
+      maxAge: "365d",
+      setHeaders: (res) => {
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'");
+      },
+    })
+  );
+
   // Health check for load balancers / uptime monitors (no auth, no data).
   app.get("/api/health", (req, res) => {
     const dbUp = mongoose.connection.readyState === 1;
@@ -77,6 +97,8 @@ function createApp({ sessionStore, authRateLimit, apiRateLimit } = {}) {
   app.use("/api/clubs", require("./routes/ClubRoute"));
   app.use("/api/me", require("./routes/MeRoute"));
   app.use("/api/admin", require("./routes/AdminRoute"));
+  app.use("/api/analytics", require("./routes/AnalyticsRoute"));
+  app.use("/api/uploads", require("./routes/UploadRoute"));
 
   app.use("/api", notFound);
   app.use(errorHandler);

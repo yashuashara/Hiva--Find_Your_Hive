@@ -60,6 +60,12 @@ const config = {
     name: process.env.DEFAULT_UNIVERSITY_NAME || "MIT World Peace University",
     shortName: process.env.DEFAULT_UNIVERSITY_SHORT_NAME || "MIT-WPU",
   },
+  // Time zone for dates in emails and day-by-day analytics.
+  timeZone: process.env.APP_TIME_ZONE || "Asia/Kolkata",
+  // Public base URL of this API (used to build links to uploaded images).
+  publicApiUrl: (process.env.API_PUBLIC_URL || `http://localhost:${Number(process.env.PORT) || 5000}`).trim().replace(/\/+$/, ""),
+  // Where uploaded images are stored on disk.
+  uploadDir: process.env.UPLOAD_DIR || path.join(__dirname, "..", "uploads"),
   // Public URL of the frontend, used for links in emails.
   appUrl: (process.env.APP_URL || (process.env.CLIENT_ORIGINS || "http://localhost:3000").split(",")[0]).trim().replace(/\/+$/, ""),
   // Optional SMTP settings. Leave SMTP_HOST empty to disable email.
@@ -71,7 +77,6 @@ const config = {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
     from: process.env.MAIL_FROM || "Event Engine <no-reply@localhost>",
-    timeZone: process.env.APP_TIME_ZONE || "Asia/Kolkata",
   },
   rateLimit: {
     authPer15Min: Number(process.env.AUTH_RATE_LIMIT || 10),

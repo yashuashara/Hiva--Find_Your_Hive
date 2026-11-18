@@ -39,6 +39,10 @@ const errorHandler = (err, req, res, next) => {
   } else if (err.type === "entity.too.large") {
     status = 413;
     message = "Request body too large";
+  } else if (Number.isInteger(err.status) && err.status >= 400 && err.status < 500) {
+    // Client errors raised by libraries (e.g. a missing static file).
+    status = err.status;
+    message = status === 404 ? "Not found" : "Bad request";
   }
 
   if (status >= 500 && !config.isTest) {

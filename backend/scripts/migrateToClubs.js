@@ -24,6 +24,7 @@ const ClubMembership = require("../models/ClubMembership");
 const Event = require("../models/Event");
 const Registration = require("../models/Registration");
 const AuditLog = require("../models/AuditLog");
+const ClubFollow = require("../models/ClubFollow");
 const { getDefaultUniversity } = require("../services/university");
 
 const apply = process.argv.includes("--apply");
@@ -93,7 +94,7 @@ async function main() {
   if (apply && regsMissing) await Registration.updateMany({ status: { $exists: false } }, { $set: { status: "confirmed" } });
 
   step("Indexes");
-  for (const Model of [University, User, Club, ClubMembership, Event, Registration, AuditLog]) {
+  for (const Model of [University, User, Club, ClubMembership, ClubFollow, Event, Registration, AuditLog]) {
     const diff = await Model.diffIndexes().catch(() => ({ toDrop: [], toCreate: [] }));
     const toCreate = diff.toCreate.map((i) => JSON.stringify(i.key || i));
     if (!diff.toDrop.length && !toCreate.length) continue;
