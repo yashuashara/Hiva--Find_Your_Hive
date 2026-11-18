@@ -14,7 +14,8 @@ const EventCard = ({ event }) => {
 
   return (
     <article className="event-card">
-      <Link to={href} className="event-card-banner" data-category={event.category} tabIndex={-1} aria-hidden="true">
+      {/* Decorative; the whole card is clickable via the title link. */}
+      <div className="event-card-banner" data-category={event.category} aria-hidden="true">
         {event.bannerUrl && <img src={event.bannerUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />}
         {start && (
           <span className="date-chip">
@@ -22,7 +23,7 @@ const EventCard = ({ event }) => {
             <span className="date-chip-day">{start.getDate()}</span>
           </span>
         )}
-      </Link>
+      </div>
       <div className="event-card-body">
         <div className="card-top">
           <span className={`badge badge--${event.category.toLowerCase()}`}>{event.category}</span>

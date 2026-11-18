@@ -474,6 +474,15 @@ h1, h2, h3 { line-height: 1.25; letter-spacing: -0.015em; }
   transition: box-shadow 0.2s var(--ease), transform 0.2s var(--ease), border-color 0.2s;
 }
 .event-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-strong); }
+/* Whole card is clickable: the title link is stretched over the card
+   ("stretched link"), so there is still exactly one link per card for
+   keyboard and screen-reader users. Other links inside sit above it. */
+.event-card { position: relative; }
+.event-card .card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.event-card .card-link:focus-visible { outline: none; }
+.event-card:has(.card-link:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.event-card:hover .card-link { color: var(--primary-text); }
+.event-card .event-club a { position: relative; z-index: 2; }
 .event-card-banner {
   position: relative; aspect-ratio: 16 / 7; overflow: hidden;
   background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
