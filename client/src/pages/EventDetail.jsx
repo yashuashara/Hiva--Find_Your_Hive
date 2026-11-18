@@ -23,7 +23,7 @@ import ReasonDialog from "../components/ReasonDialog";
 import { formatDateRange, formatDate, formatTime, pct } from "../utils/format";
 import {
   HiArrowLeft, HiOutlineUsers, HiOutlineCheckCircle, HiOutlineTicket, HiCheck, HiX,
-  HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineDownload, HiOutlinePencil, HiOutlineQrcode,
+  HiOutlineCalendar, HiOutlineLocationMarker, HiOutlineDownload, HiOutlinePencil, HiOutlineQrcode, HiOutlineUserGroup,
 } from "react-icons/hi";
 
 // Which lifecycle buttons to show for each status.
@@ -247,6 +247,11 @@ const EventDetail = () => {
           {viewer.canManage && ["draft", "rejected", "approved", "published"].includes(event.status) && (
             <Link to={`/manage/events/${encodeURIComponent(event._id)}/edit`} className="btn btn-ghost btn-sm">
               <HiOutlinePencil aria-hidden="true" /> Edit
+            </Link>
+          )}
+          {viewer.canManage && event.club?.slug && (
+            <Link to={`/clubs/${event.club.slug}#team`} className="btn btn-ghost btn-sm">
+              <HiOutlineUserGroup aria-hidden="true" /> Team
             </Link>
           )}
           {viewer.canManage && (MANAGER_ACTIONS[event.status] || []).map(([action, label, cls]) => (

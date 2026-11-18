@@ -9,7 +9,7 @@ import { SkeletonStats } from "../components/Skeleton";
 import { TimeBarChart } from "../components/charts";
 import EventPerformanceTable from "../components/EventPerformanceTable";
 import { formatDate, formatTime } from "../utils/format";
-import { HiOutlineCalendar, HiOutlineTicket, HiOutlineCheckCircle, HiOutlineChartBar, HiPlus } from "react-icons/hi";
+import { HiOutlineCalendar, HiOutlineTicket, HiOutlineCheckCircle, HiOutlineChartBar, HiPlus, HiOutlineUserGroup } from "react-icons/hi";
 
 // Analytics for one club, for its owners/organizers (and admins).
 const ClubDashboard = () => {
@@ -78,6 +78,9 @@ const ClubDashboard = () => {
                   {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
+            )}
+            {data?.club?.slug && (
+              <Link to={`/clubs/${data.club.slug}#team`} className="btn btn-secondary"><HiOutlineUserGroup aria-hidden="true" /> Manage team</Link>
             )}
             <Link to="/manage/events/new" className="btn btn-primary"><HiPlus aria-hidden="true" /> New event</Link>
           </div>

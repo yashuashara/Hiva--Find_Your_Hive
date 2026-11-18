@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   getClub, listEvents, updateClub, reviewClub, listClubMembers, addClubMember,
@@ -40,6 +40,16 @@ const TeamPanel = ({ club, canManageClub, isAdmin, onChange }) => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Arriving via a "Team" / "Manage team" link (#team): scroll here once loaded.
+  const location = useLocation();
+  const sectionRef = useRef(null);
+  useEffect(() => {
+    if (!loading && location.hash === "#team" && sectionRef.current) {
+      sectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      sectionRef.current.focus({ preventScroll: true });
+    }
+  }, [loading, location.hash]);
 
   const add = async (e) => {
     e.preventDefault();
@@ -82,8 +92,8 @@ const TeamPanel = ({ club, canManageClub, isAdmin, onChange }) => {
   };
 
   return (
-    <section className="detail-card">
-      <h3>Team</h3>
+    <section className="detail-card" id="team" ref={sectionRef} tabIndex={-1} aria-labelledby="team-heading">
+      <h3 id="team-heading">Team</h3>
       {loading ? (
         <SkeletonTable rows={3} />
       ) : (
