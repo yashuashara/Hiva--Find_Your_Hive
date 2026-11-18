@@ -2,7 +2,9 @@ const crypto = require("crypto");
 const Event = require("../models/Event");
 const Club = require("../models/Club");
 const Registration = require("../models/Registration");
+const User = require("../models/User");
 const AppError = require("../utils/AppError");
+const { sendEventCancelled } = require("../services/email");
 const asyncHandler = require("../utils/asyncHandler");
 const { audit } = require("../services/audit");
 const { clubRoleOf, eventRoleOf, can, isPlatformAdmin, activeClubIds } = require("../services/permissions");
@@ -257,7 +259,15 @@ const transitionEvent = asyncHandler(async (req, res) => {
   const meta = { from: event.status, to: spec.to };
   if (reason) meta.reason = reason;
   if (action === "cancel") {
-    // Cancelling an event invalidates every ticket for it.
+    // Cancelling an event invalidates every ticket for it, and students who
+    // registered themselves are told by email (when email is configured).
+    const affectedUserIds = await Registration.distinct("userId", {
+      eventId: event._id,
+      status: "confirmed",
+      userId: { $exists: true },
+    });
+    const users = await User.find({ _id: { $in: affectedUserIds }, status: "active" }).select("name email").lean();
+    users.forEach((u) => sendEventCancelled(u, updated, reason));
     const result = await Registration.updateMany(
       { eventId: event._id, status: "confirmed" },
       { $set: { status: "cancelled", cancelReason: "event_cancelled", cancelledAt: now, cancelledBy: req.user._id } }

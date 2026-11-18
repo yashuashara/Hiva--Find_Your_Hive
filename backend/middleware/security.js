@@ -1,14 +1,19 @@
-const rateLimit = require("express-rate-limit");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 const AppError = require("../utils/AppError");
 
 const FIFTEEN_MIN = 15 * 60 * 1000;
 
-const limiter = (limit, message) =>
+// perUser: count signed-in users individually instead of per IP address.
+// Many students share one campus Wi-Fi IP, so a pure per-IP limit would
+// block a whole team of volunteers scanning tickets at a busy entrance.
+const limiter = (limit, message, { perUser = false } = {}) =>
   rateLimit({
     windowMs: FIFTEEN_MIN,
     limit,
     standardHeaders: "draft-8",
     legacyHeaders: false,
+    keyGenerator: (req) =>
+      perUser && req.session?.userId ? `user:${req.session.userId}` : `ip:${ipKeyGenerator(req.ip)}`,
     handler: (req, res, next) => next(new AppError(429, message)),
   });
 

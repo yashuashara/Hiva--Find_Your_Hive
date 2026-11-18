@@ -169,6 +169,9 @@ const checkInSchema = z.object({
   eventId: trimmed(1, 40).optional(),
 });
 
+// Raw QR text from the scanner (or a typed ticket ID). Parsed server-side.
+const scanSchema = z.object({ code: z.string().trim().min(1).max(200) });
+
 const myRegistrationsQuery = z.object({
   when: z.enum(["upcoming", "past", "all"]).default("all"),
 });
@@ -247,6 +250,7 @@ module.exports = {
   createRegistrationSchema,
   selfRegisterSchema,
   checkInSchema,
+  scanSchema,
   myRegistrationsQuery,
   clubIdParam,
   clubSlugParam,

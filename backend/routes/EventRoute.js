@@ -32,6 +32,10 @@ router.get(
   regs.listEventRegistrations
 );
 
+// Door scanning (club volunteers and up)
+router.post("/events/:id/check-in", requireAuth, validate({ params: s.eventIdParam, body: s.scanSchema }), regs.checkInByCode);
+router.get("/events/:id/attendance", requireAuth, validate({ params: s.eventIdParam }), regs.getAttendance);
+
 // Students register themselves
 router.post("/events/:id/register", requireAuth, validate({ params: s.eventIdParam, body: s.selfRegisterSchema }), regs.registerSelf);
 

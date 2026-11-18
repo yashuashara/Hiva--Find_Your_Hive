@@ -42,7 +42,6 @@ function createApp({ sessionStore, authRateLimit, apiRateLimit } = {}) {
     res.status(dbUp ? 200 : 503).json({ status: dbUp ? "ok" : "degraded", db: dbUp ? "up" : "down" });
   });
 
-  app.use("/api", limiter(apiRateLimit ?? config.rateLimit.apiPer15Min, "Too many requests. Please slow down."));
   app.use("/api", requireCsrfHeader);
 
   app.use(
@@ -60,6 +59,12 @@ function createApp({ sessionStore, authRateLimit, apiRateLimit } = {}) {
         maxAge: config.sessionMaxAgeMs,
       },
     })
+  );
+  // After the session (so signed-in users are limited individually), before
+  // loading the user from the database (so floods are cut off cheaply).
+  app.use(
+    "/api",
+    limiter(apiRateLimit ?? config.rateLimit.apiPer15Min, "Too many requests. Please slow down.", { perUser: true })
   );
   app.use(loadUser);
 

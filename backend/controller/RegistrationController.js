@@ -7,6 +7,8 @@ const { audit } = require("../services/audit");
 const { eventRoleOf, can } = require("../services/permissions");
 const { loadEventFor } = require("../services/eventAccess");
 const { PUBLIC_STATUSES, registrationWindowError, reserveSeat, releaseSeat } = require("../services/eventRules");
+const { parseTicketCode } = require("../services/ticketCode");
+const { sendRegistrationConfirmation } = require("../services/email");
 
 // 128 bits of randomness, URL-safe. Unguessable, unlike sequential IDs.
 const newTicketId = () => `TKT-${crypto.randomBytes(16).toString("base64url")}`;
@@ -87,6 +89,7 @@ const registerSelf = asyncHandler(async (req, res) => {
     department: profile.department,
     year: profile.year,
   });
+  sendRegistrationConfirmation(user, event, registration);
   res.status(201).json({ success: true, data: registration });
 });
 
@@ -262,7 +265,102 @@ const cancelRegistration = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Registration cancelled", data: updated });
 });
 
+// ==================== DOOR SCANNING ====================
+
+// Tickets stop working this long after the event ends.
+const CHECK_IN_GRACE_MS = 6 * 60 * 60 * 1000;
+
+const attendeeOf = (r) => ({ name: r.studentName, studentId: r.studentId, department: r.department, year: r.year });
+
+async function attendanceStats(eventId) {
+  const [registered, checkedIn] = await Promise.all([
+    Registration.countDocuments({ eventId, status: "confirmed" }),
+    Registration.countDocuments({ eventId, status: "confirmed", checkInStatus: true }),
+  ]);
+  return { registered, checkedIn };
+}
+
+// POST /events/:id/check-in { code } — called by the scanner at THIS event's
+// entrance. `code` is the raw QR text (or a typed ticket ID). The QR content
+// is never trusted: everything is looked up and verified here, and the
+// check-in itself is a single atomic update, so a ticket works exactly once.
+// Every failure carries a machine-readable code for the scanner UI.
+const checkInByCode = asyncHandler(async (req, res) => {
+  const { event } = await loadEventFor(req.user, req.params.id, "checkIn");
+  const fail = (status, code, message, extra = {}) => {
+    throw new AppError(status, message, { code, ...extra });
+  };
+
+  const ticketId = parseTicketCode(req.body.code);
+  if (!ticketId) fail(400, "INVALID_CODE", "This is not an Event Engine ticket");
+
+  if (event.status === "cancelled") fail(409, "EVENT_CANCELLED", "This event has been cancelled");
+  if (event.status !== "published") fail(409, "EVENT_NOT_ACTIVE", `Check-in is closed: the event is ${event.status}`);
+  if (event.endsAt && Date.now() > new Date(event.endsAt).getTime() + CHECK_IN_GRACE_MS) {
+    fail(409, "EXPIRED", "This event has ended; tickets have expired");
+  }
+
+  const registration = await Registration.findOne({ ticketId }).lean();
+  if (!registration) fail(404, "NOT_FOUND", "Ticket not recognised");
+  if (registration.eventId !== event._id) fail(409, "WRONG_EVENT", "This ticket is for a different event");
+  if (registration.status !== "confirmed") {
+    fail(409, "CANCELLED", "This ticket has been cancelled", { attendee: attendeeOf(registration) });
+  }
+
+  const now = new Date();
+  const updated = await Registration.findOneAndUpdate(
+    { _id: registration._id, status: "confirmed", checkInStatus: false },
+    { $set: { checkInStatus: true, checkedInAt: now, checkedInBy: req.user._id } },
+    { new: true }
+  ).lean();
+
+  if (!updated) {
+    const current = await Registration.findById(registration._id).lean();
+    if (current?.checkInStatus) {
+      fail(409, "ALREADY_CHECKED_IN", "Already checked in", {
+        attendee: attendeeOf(current),
+        checkedInAt: current.checkedInAt,
+      });
+    }
+    fail(409, "CANCELLED", "This ticket has been cancelled", { attendee: attendeeOf(registration) });
+  }
+
+  res.json({
+    success: true,
+    data: {
+      code: "OK",
+      attendee: attendeeOf(updated),
+      checkedInAt: updated.checkedInAt,
+      stats: await attendanceStats(event._id),
+    },
+  });
+});
+
+// GET /events/:id/attendance — live counts + latest check-ins, polled by the
+// scanner and the event page so every door sees the same numbers.
+const getAttendance = asyncHandler(async (req, res) => {
+  const { event } = await loadEventFor(req.user, req.params.id, "checkIn");
+  const [stats, recent] = await Promise.all([
+    attendanceStats(event._id),
+    Registration.find({ eventId: event._id, status: "confirmed", checkInStatus: true })
+      .sort({ checkedInAt: -1 })
+      .limit(10)
+      .select("studentName checkedInAt")
+      .lean(),
+  ]);
+  res.json({
+    success: true,
+    data: {
+      ...stats,
+      capacity: event.capacity,
+      recent: recent.map((r) => ({ name: r.studentName, checkedInAt: r.checkedInAt })),
+    },
+  });
+});
+
 module.exports = {
+  checkInByCode,
+  getAttendance,
   registerSelf,
   myRegistrations,
   cancelMyRegistration,

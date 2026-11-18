@@ -60,9 +60,24 @@ const config = {
     name: process.env.DEFAULT_UNIVERSITY_NAME || "MIT World Peace University",
     shortName: process.env.DEFAULT_UNIVERSITY_SHORT_NAME || "MIT-WPU",
   },
+  // Public URL of the frontend, used for links in emails.
+  appUrl: (process.env.APP_URL || (process.env.CLIENT_ORIGINS || "http://localhost:3000").split(",")[0]).trim().replace(/\/+$/, ""),
+  // Optional SMTP settings. Leave SMTP_HOST empty to disable email.
+  email: {
+    enabled: !!process.env.SMTP_HOST,
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === "true",
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.MAIL_FROM || "Event Engine <no-reply@localhost>",
+    timeZone: process.env.APP_TIME_ZONE || "Asia/Kolkata",
+  },
   rateLimit: {
     authPer15Min: Number(process.env.AUTH_RATE_LIMIT || 10),
-    apiPer15Min: Number(process.env.API_RATE_LIMIT || 600),
+    // Per signed-in user (per IP for anonymous visitors). A scanner polling
+    // attendance plus a scan every few seconds stays well under this.
+    apiPer15Min: Number(process.env.API_RATE_LIMIT || 1500),
   },
 };
 
