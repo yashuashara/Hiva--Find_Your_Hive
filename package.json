@@ -3,7 +3,7 @@
   "private": true,
   "description": "Hiva: campus club events, registration and QR ticketing",
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "scripts": {
     "install:all": "npm ci --prefix backend && npm ci --prefix client",

@@ -1,10 +1,16 @@
 // Vercel serverless function: every /api/* request is rewritten here
 // (see vercel.json) and handled by the same Express app used locally.
-const { getApp } = require("../backend/serverless");
+//
+// The app is loaded inside the handler (not at the top of the file) so that
+// configuration problems, such as a missing environment variable, produce a
+// clear 503 response and a readable message in the Vercel logs instead of a
+// generic "function invocation failed" crash.
+let getApp;
 
 module.exports = async (req, res) => {
   let app;
   try {
+    getApp = getApp || require("../backend/serverless").getApp;
     app = await getApp();
   } catch (err) {
     console.error("[startup] could not initialise the API:", err.message);
