@@ -1,102 +1,97 @@
-# Hiva
+# Hiva 🐝
 
-**Find your hive.** A campus platform where student clubs publish events, students register in one tap, and organizers check people in by scanning QR tickets at the door.
+**Find your hive.** Hiva is a campus events platform where clubs run events and students discover, register and check in with QR tickets.
 
-Hiva is an independent student project. It is not an official service of any university.
+> 🔗 Live demo: _add your link here_  
+> 📸 Screenshots: _add 2–3 screenshots here_
 
-## Features
+Hiva is an independent student project and is not an official service of any university.
 
-- **Clubs.** Any student can request a club. A university admin approves it, and the requester becomes its owner. Owners build a team of organizers (run events) and volunteers (scan tickets); each person an owner adds needs admin approval. Students can follow clubs.
-- **Event approval workflow.** Events move through `draft → pending approval → approved → published → completed`, with `rejected` and `cancelled` states. Organizers submit, admins approve or reject with a reason, and cancelling an event cancels all its tickets.
-- **Student registration.** Students register from their profile (PRN, department, year). Seats are reserved atomically and the database enforces one active ticket per student, so events never oversell, even under concurrent requests. Students can cancel before an event starts.
-- **QR tickets and PDF.** Every ticket has a QR code containing only a random 128-bit ticket ID (no personal data) and can be downloaded as a PDF.
-- **Door scanner.** Organizers and volunteers scan tickets with a phone camera. Results show instantly (valid, already checked in, cancelled, wrong event, expired), with sound and vibration. Every scan is verified on the server, and each ticket works exactly once.
-- **Live attendance.** Check-in counts refresh every few seconds on every scanner and on the event page while the event is running.
-- **Analytics.** Admin, club and student dashboards show registrations per day, attendance at past events, seats filled and per-event performance, all computed in the database.
-- **Role-based access.** Students, club owners, organizers, volunteers, university admins and a super admin. Permissions are enforced on the server for every request; club roles only apply while a club is approved.
+---
 
-Also included: event discovery with search, filters and pagination; recommendations; light and dark themes; image uploads for banners and logos; email confirmations (optional); CSV attendee export; and an audit log of admin actions.
+## ✨ Features
 
-## Tech stack
+**For students**
+- Sign up, complete profile (PRN, department, year)
+- Browse and search events by name, club, category and price, upcoming or past
+- One-click registration with seat limits
+- QR ticket in the app + downloadable PDF ticket
+- Cancel a registration before the event starts
+- Follow clubs and get "Recommended for you" events
 
-| Layer | Technology |
+**For clubs**
+- Request a new club (approved by admin)
+- Team roles: owner, organizer, volunteer
+- Create events → submit for approval → publish
+- Attendee list and CSV export
+- Camera-based QR scanner at the door with live attendance count
+
+**For admins**
+- Approve or reject clubs, events and club team members
+- Manage users and roles
+- Analytics dashboard
+
+## 🔒 Built to be safe
+- Atomic seat booking: seats never go below zero, even with many students registering at once
+- A ticket can be scanned only once, even at two gates at the same time
+- QR codes contain only a random ticket ID, no personal data
+- Session-based login, CSRF protection, rate limiting and role-based access control
+- Image uploads checked by file content
+- Important admin actions are recorded in an audit log on the server
+
+## 🛠️ Tech stack
+
+| Layer | Tech |
 |---|---|
-| Frontend | React 19, Vite, React Router 7, framer-motion, qrcode, qr-scanner, jsPDF |
-| Backend | Node.js (20+), Express 4, Mongoose 7, zod validation |
-| Database | MongoDB |
-| Auth & security | Session cookies (httpOnly, MongoDB-backed), scrypt password hashing, helmet, rate limiting, CSRF header check, strict Content Security Policy |
-| Email & files | nodemailer (SMTP), multer + Vercel Blob for image uploads |
-| Testing | Jest and Supertest (109 tests, including concurrency cases) |
-| Deployment | Vercel (static site + serverless API), MongoDB Atlas, GitHub Actions CI |
+| Frontend | React, Vite |
+| Backend | Node.js, Express |
+| Database | MongoDB (Mongoose) |
+| Validation | Zod |
+| Testing | Jest, Supertest |
+| Deployment | Vercel, MongoDB Atlas, Vercel Blob |
 
-## Run locally
+## 🚀 Run locally
 
-**Prerequisites:** Node.js 20 or newer, and MongoDB running locally on the default port (27017).
-
-1. **Install dependencies** (from the project root):
-
-   ```bash
-   npm run install:all
-   ```
-
-2. **Configure the backend.** Copy `backend/.env.example` to `backend/.env` and set `SESSION_SECRET` to a long random string:
-
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-   ```
-
-   The other defaults work for local development.
-
-3. **Optional: load sample data** into an empty database. This **deletes** all clubs, events and registrations first:
-
-   ```bash
-   cd backend
-   npm run seed -- --reset
-   ```
-
-4. **Create your admin account.** Set `SUPER_ADMIN_EMAIL` in `backend/.env`, then in the `backend` folder run:
-
-   ```bash
-   SUPER_ADMIN_PASSWORD='a-long-unique-password' npm run create-admin
-   ```
-
-   On Windows PowerShell:
-
-   ```powershell
-   $env:SUPER_ADMIN_PASSWORD = "a-long-unique-password"; npm.cmd run create-admin; Remove-Item Env:SUPER_ADMIN_PASSWORD
-   ```
-
-5. **Start the app** in two terminals (from the project root):
-
-   ```bash
-   npm run dev:api   # API on http://localhost:5000
-   npm run dev:web   # website on http://localhost:3000
-   ```
-
-   Open **http://localhost:3000**. The website forwards `/api` requests to the API, so no extra setup is needed.
-
-> **Windows tip:** if PowerShell says running scripts is disabled, use `npm.cmd` instead of `npm`, or run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
-
-## Running the tests
-
-The backend tests use a throwaway database for each test file and never touch your real data:
+**Requirements:** Node.js 20+ and MongoDB running locally
 
 ```bash
-cd backend
-MONGO_TEST_URI=mongodb://127.0.0.1:27017 npm test
+# 1. Install everything
+npm run install:all
+
+# 2. Set up the backend environment file
+cp backend/.env.example backend/.env
+# then edit backend/.env: set SESSION_SECRET (a long random string)
+# and SUPER_ADMIN_EMAIL (your email). MONGODB_URI defaults to local MongoDB.
+# (client/.env is optional: the website talks to the API on the same site by default)
+
+# 3. Optional: add sample data. WARNING: this deletes all existing
+#    clubs, events and registrations first.
+npm run seed --prefix backend -- --reset
+
+# 4. Create your admin account (uses SUPER_ADMIN_EMAIL from backend/.env)
+SUPER_ADMIN_PASSWORD='a-long-unique-password' npm run create-admin --prefix backend
+
+# 5. Start the API and the website (two terminals)
+npm run dev:api
+npm run dev:web
 ```
 
-Without `MONGO_TEST_URI`, the tests start an in-memory MongoDB instead (this downloads a MongoDB binary the first time).
+Open http://localhost:3000
 
-## Project structure
+> **Windows (PowerShell):** if scripts are blocked, use `npm.cmd` instead of `npm`. Set the admin password like this:
+> `$env:SUPER_ADMIN_PASSWORD = "a-long-unique-password"; npm.cmd run create-admin --prefix backend; Remove-Item Env:SUPER_ADMIN_PASSWORD`
 
+## 🧪 Tests
+
+```bash
+npm test
 ```
-api/          Vercel serverless entry point (wraps the Express app)
-backend/      Express API: routes, controllers, models, services, tests, scripts
-client/       React app: pages, components, hooks, styles
-DEPLOYMENT.md Step-by-step production deployment (Vercel, Atlas, Blob)
-```
 
-## Deployment
+The tests use throwaway databases and never touch your data. To run them against your local MongoDB instead of downloading an in-memory one, set `MONGO_TEST_URI=mongodb://127.0.0.1:27017` first.
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the full guide: GitHub, MongoDB Atlas, Vercel, Vercel Blob, creating the admin account, backups and rollbacks.
+## 📦 Deployment
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the step-by-step Vercel + MongoDB Atlas guide.
+
+## 👩‍💻 Author
+**Yashvi Ashara**: M.Sc Blockchain Technology student  
+[LinkedIn](#) · [X](#) · [GitHub](#)
