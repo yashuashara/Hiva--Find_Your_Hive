@@ -2,9 +2,6 @@
 
 **Find your hive.** Hiva is a campus events platform where clubs run events and students discover, register and check in with QR tickets.
 
-> 🔗 Live demo: _add your link here_  
-> 📸 Screenshots: _add 2–3 screenshots here_
-
 Hiva is an independent student project and is not an official service of any university.
 
 ---
