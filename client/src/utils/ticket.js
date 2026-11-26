@@ -1,11 +1,11 @@
 // Ticket QR codes and PDF tickets, generated in the browser.
 //
-// The QR holds only "EETKT:<ticketId>": no name, PRN or email. The ticket ID
+// The QR holds only "HIVA:<ticketId>": no name, PRN or email. The ticket ID
 // is random and unguessable, and the server verifies every scan.
 import QRCode from "qrcode";
 import { formatDateRange } from "./format";
 
-export const encodeTicket = (ticketId) => `EETKT:${ticketId}`;
+export const encodeTicket = (ticketId) => `HIVA:${ticketId}`;
 
 // High error correction so a scratched phone screen or printout still scans.
 export const ticketQrDataUrl = (ticketId, size = 320) =>
@@ -33,7 +33,7 @@ export async function downloadTicketPdf(ticket) {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text("EVENT ENGINE - TICKET", margin, 10);
+  doc.text("HIVA - TICKET", margin, 10);
 
   doc.setTextColor(17, 24, 39);
   doc.setFontSize(14);

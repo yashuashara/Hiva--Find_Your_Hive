@@ -89,7 +89,7 @@ describe("login / logout", () => {
     const user = await h.createUser({ email: "s@example.com" });
     const res = await h.client(app).post("/api/auth/login").send({ email: user.email, password: h.PASSWORD });
     const cookie = res.headers["set-cookie"].join(";");
-    expect(cookie).toMatch(/ee\.sid=/);
+    expect(cookie).toMatch(/hiva\.sid=/);
     expect(cookie).toMatch(/HttpOnly/i);
   });
 });

@@ -1,7 +1,7 @@
 {
-  "name": "event-engine",
+  "name": "hiva",
   "private": true,
-  "description": "Event Engine & Ticket Club: campus event discovery, registration and QR ticketing",
+  "description": "Hiva: campus club events, registration and QR ticketing",
   "engines": {
     "node": ">=20"
   },

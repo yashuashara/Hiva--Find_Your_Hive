@@ -1,5 +1,5 @@
 {
-  "name": "event-engine-client",
+  "name": "hiva-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",

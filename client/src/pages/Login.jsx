@@ -35,7 +35,7 @@ const Login = () => {
     <div className="auth-page">
       <div className="auth-card">
         <Link to="/events" className="auth-brand">
-          <HiOutlineCalendar aria-hidden="true" /> Event Engine
+          <HiOutlineCalendar aria-hidden="true" /> Hiva
         </Link>
         <h1>Sign in</h1>
         <p className="auth-subtitle">Welcome back. Sign in to manage your events and tickets.</p>

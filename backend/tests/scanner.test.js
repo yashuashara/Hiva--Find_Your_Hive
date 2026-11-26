@@ -33,12 +33,17 @@ const waitForEmail = async (n = 1) => {
 
 describe("ticket codes", () => {
   test("QR payload contains only the ticket ID", () => {
-    expect(encodeTicket("TKT-abc")).toBe("EETKT:TKT-abc");
-    expect(parseTicketCode("EETKT:TKT-abc")).toBe("TKT-abc");
-    expect(parseTicketCode("  eetkt:TKT-abc ")).toBe("TKT-abc");
+    expect(encodeTicket("TKT-abc")).toBe("HIVA:TKT-abc");
+    expect(parseTicketCode("HIVA:TKT-abc")).toBe("TKT-abc");
+    expect(parseTicketCode("  hiva:TKT-abc ")).toBe("TKT-abc");
     expect(parseTicketCode("TKT-abc")).toBe("TKT-abc"); // typed by hand
     expect(parseTicketCode("https://evil.example/?x=1")).toBeNull();
     expect(parseTicketCode('{"$gt":""}')).toBeNull();
+  });
+
+  test("tickets issued before the rename (EETKT: prefix) still parse", () => {
+    expect(parseTicketCode("EETKT:TKT-abc")).toBe("TKT-abc");
+    expect(parseTicketCode("  eetkt:TKT-abc ")).toBe("TKT-abc");
   });
 });
 

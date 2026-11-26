@@ -64,7 +64,7 @@ const MainLayout = () => {
       <header className="mobile-topbar">
         <Link to="/" className="sidebar-brand" onClick={closeMenu}>
           <HiOutlineCalendar className="brand-icon" aria-hidden="true" />
-          <span>Event Engine</span>
+          <span>Hiva</span>
         </Link>
         <button
           type="button"
@@ -81,7 +81,7 @@ const MainLayout = () => {
       <aside id="sidebar" className={`sidebar ${menuOpen ? "sidebar--open" : ""}`}>
         <Link to="/" className="sidebar-brand" onClick={closeMenu}>
           <HiOutlineCalendar className="brand-icon" aria-hidden="true" />
-          <span>Event Engine</span>
+          <span>Hiva</span>
         </Link>
         <nav className="sidebar-nav" aria-label="Main">
           {!isAdmin && <NavItem to="/" end icon={HiOutlineHome} onClick={closeMenu}><span>Home</span></NavItem>}

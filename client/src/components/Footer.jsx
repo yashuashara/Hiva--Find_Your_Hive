@@ -1,7 +1,7 @@
 const Footer = () => {
   return (
     <footer className="app-footer">
-      <p>&copy; {new Date().getFullYear()} Event Engine &amp; Ticket Club</p>
+      <p>&copy; {new Date().getFullYear()} Hiva</p>
     </footer>
   );
 };

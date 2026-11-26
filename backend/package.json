@@ -1,7 +1,7 @@
 {
-  "name": "event-engine-api",
+  "name": "hiva-api",
   "version": "1.0.0",
-  "description": "Event Engine & Ticket Club - REST API",
+  "description": "Hiva - REST API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

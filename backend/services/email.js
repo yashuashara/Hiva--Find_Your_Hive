@@ -38,7 +38,7 @@ function layout(title, bodyHtml) {
 <div style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:28px">
 <h1 style="font-size:20px;margin:0 0 16px">${escapeHtml(title)}</h1>
 ${bodyHtml}
-<p style="color:#666;font-size:12px;margin-top:28px">Event Engine &amp; Ticket Club · You received this because of activity on your account.</p>
+<p style="color:#666;font-size:12px;margin-top:28px">Hiva · You received this because of activity on your account.</p>
 </div></body></html>`;
 }
 

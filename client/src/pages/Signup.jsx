@@ -45,7 +45,7 @@ const Signup = () => {
     <div className="auth-page">
       <div className="auth-card">
         <Link to="/events" className="auth-brand">
-          <HiOutlineCalendar aria-hidden="true" /> Event Engine
+          <HiOutlineCalendar aria-hidden="true" /> Hiva
         </Link>
         <h1>Create your account</h1>
         <p className="auth-subtitle">Discover campus events and keep all your tickets in one place.</p>

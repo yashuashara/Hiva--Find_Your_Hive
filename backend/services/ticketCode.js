@@ -1,10 +1,12 @@
 // What goes inside a ticket's QR code.
 //
-// The QR holds only "EETKT:<ticketId>". No names, PRNs or emails, so a
+// The QR holds only "HIVA:<ticketId>". No names, PRNs or emails, so a
 // photographed ticket reveals nothing personal. The ticket ID is 128 bits of
 // randomness, so it cannot be guessed; every scan is still verified by the
 // server (exists, right event, not cancelled, not already used).
-const PREFIX = "EETKT:";
+const PREFIX = "HIVA:";
+// Tickets issued before the rename carry this prefix and must keep scanning.
+const LEGACY_PREFIXES = ["EETKT:"];
 const TICKET_ID = /^[A-Za-z0-9_-]{3,60}$/;
 
 const encodeTicket = (ticketId) => `${PREFIX}${ticketId}`;
@@ -14,8 +16,9 @@ const encodeTicket = (ticketId) => `${PREFIX}${ticketId}`;
 function parseTicketCode(raw) {
   if (typeof raw !== "string") return null;
   let value = raw.trim();
-  if (value.toUpperCase().startsWith(PREFIX)) value = value.slice(PREFIX.length).trim();
+  const prefix = [PREFIX, ...LEGACY_PREFIXES].find((p) => value.toUpperCase().startsWith(p));
+  if (prefix) value = value.slice(prefix.length).trim();
   return TICKET_ID.test(value) ? value : null;
 }
 
-module.exports = { PREFIX, encodeTicket, parseTicketCode };
+module.exports = { PREFIX, LEGACY_PREFIXES, encodeTicket, parseTicketCode };

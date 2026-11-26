@@ -292,7 +292,7 @@ const checkInByCode = asyncHandler(async (req, res) => {
   };
 
   const ticketId = parseTicketCode(req.body.code);
-  if (!ticketId) fail(400, "INVALID_CODE", "This is not an Event Engine ticket");
+  if (!ticketId) fail(400, "INVALID_CODE", "This is not a Hiva ticket");
 
   if (event.status === "cancelled") fail(409, "EVENT_CANCELLED", "This event has been cancelled");
   if (event.status !== "published") fail(409, "EVENT_NOT_ACTIVE", `Check-in is closed: the event is ${event.status}`);

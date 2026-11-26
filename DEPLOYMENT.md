@@ -1,4 +1,4 @@
-# Deploying Event Engine
+# Deploying Hiva
 
 Everything runs on **Vercel**: the React app is served as static files and the
 Express API runs as one serverless function (`api/index.js`) on the same
@@ -22,7 +22,7 @@ Time needed: about 30–45 minutes the first time.
 ## 1. Put the code on GitHub (private)
 
 1. Create a GitHub account if you don't have one.
-2. On github.com, click **New repository**. Name it `event-engine`, choose
+2. On github.com, click **New repository**. Name it `hiva`, choose
    **Private**, and do **not** add a README, .gitignore or licence (the
    project already has them).
 3. In GitHub **Settings > Emails**, tick **Keep my email addresses private** and
@@ -31,7 +31,7 @@ Time needed: about 30–45 minutes the first time.
 4. In a terminal in the project folder:
 
    ```bash
-   git remote add origin https://github.com/<your-username>/event-engine.git
+   git remote add origin https://github.com/<your-username>/hiva.git
    git push -u origin main
    ```
 
@@ -44,21 +44,21 @@ and a frontend build on every push. Check the **Actions** tab.
 
 1. Sign up at <https://www.mongodb.com/cloud/atlas> and create a **free M0** cluster.
    Pick the region closest to your users (e.g. Mumbai, `ap-south-1`).
-2. **Database Access > Add user**: username `event-engine`, a long generated
+2. **Database Access > Add user**: username `hiva`, a long generated
    password, role **Read and write to any database**. Save the password.
 3. **Network Access > Add IP address > Allow access from anywhere (0.0.0.0/0)**.
    Vercel's servers do not have fixed IP addresses, so this is required.
    The database is still protected by the user/password above.
 4. **Connect > Drivers**: copy the connection string and fill in the
    password and a database name, e.g.
-   `mongodb+srv://event-engine:<password>@cluster0.xxxxx.mongodb.net/event_engine?retryWrites=true&w=majority`
+   `mongodb+srv://hiva:<password>@cluster0.xxxxx.mongodb.net/hiva?retryWrites=true&w=majority`
 
 > The free M0 tier has **no automatic backups**. See section 7.
 
 ## 3. Create the Vercel project
 
 1. Sign in at <https://vercel.com> with your GitHub account.
-2. **Add New > Project**, import the `event-engine` repository.
+2. **Add New > Project**, import the `hiva` repository.
 3. Leave **Root Directory** as the repository root. Vercel reads
    `vercel.json` for the install/build commands, output folder, the `/api`
    function and the security headers. Framework preset: **Other**.

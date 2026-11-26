@@ -4,7 +4,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const { hashPassword, verifyPassword, getDummyHash } = require("../utils/password");
 const { getDefaultUniversity } = require("../services/university");
 
-const SESSION_COOKIE = "ee.sid";
+const SESSION_COOKIE = "hiva.sid";
 
 // Starts a fresh session for the user. Regenerating the session ID on login
 // prevents session-fixation attacks.

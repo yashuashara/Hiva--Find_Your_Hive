@@ -105,7 +105,7 @@ const Landing = () => {
       </section>
 
       <p className="disclaimer">
-        Event Engine &amp; Ticket Club is an independent student project and is not an official service of any university.
+        Hiva is an independent student project and is not an official service of any university.
       </p>
     </div>
   );
